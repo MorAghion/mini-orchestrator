@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS waves (
     number INTEGER NOT NULL,
     roles TEXT NOT NULL,            -- JSON array
     status TEXT NOT NULL,
+    is_rework INTEGER NOT NULL DEFAULT 0,
     started_at TEXT,
     completed_at TEXT
 );
@@ -68,7 +69,17 @@ CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(project_id);
 async def init_db() -> None:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
+        # Lightweight forward-only migrations for pre-existing DBs. Each one is
+        # idempotent — try the ALTER, swallow "duplicate column" errors.
+        await _ensure_column(db, "waves", "is_rework", "INTEGER NOT NULL DEFAULT 0")
         await db.commit()
+
+
+async def _ensure_column(db: aiosqlite.Connection, table: str, column: str, decl: str) -> None:
+    cur = await db.execute(f"PRAGMA table_info({table})")
+    cols = {row[1] for row in await cur.fetchall()}
+    if column not in cols:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 async def get_connection() -> aiosqlite.Connection:

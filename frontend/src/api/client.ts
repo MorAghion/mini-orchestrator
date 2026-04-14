@@ -15,6 +15,7 @@ export interface Wave {
   number: number;
   roles: string[];
   status: "pending" | "running" | "done" | "failed";
+  is_rework: boolean;
   started_at: string | null;
   completed_at: string | null;
 }

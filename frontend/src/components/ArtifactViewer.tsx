@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { api, DocTask } from "../api/client";
+import { ROLE_FILENAME, ROLE_TITLE, TASK_STATUS_LABEL } from "../labels";
 
 interface Props {
   projectId: string;
@@ -7,19 +10,8 @@ interface Props {
   onClose: () => void;
 }
 
-const FILENAMES: Record<string, string> = {
-  prd: "PRD.md",
-  architect: "ARCHITECTURE.md",
-  backend_doc: "BACKEND.md",
-  frontend_doc: "FRONTEND.md",
-  security_doc: "SECURITY.md",
-  devops_doc: "ENV.md",
-  ui_design_doc: "UI_DESIGN_SYSTEM.md",
-  screens_doc: "SCREENS.md",
-};
-
 export function ArtifactViewer({ projectId, task, onClose }: Props) {
-  const filename = FILENAMES[task.role];
+  const filename = ROLE_FILENAME[task.role];
   const [content, setContent] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
@@ -31,21 +23,34 @@ export function ArtifactViewer({ projectId, task, onClose }: Props) {
       .catch((e) => setError(String(e)));
   }, [projectId, filename, task.status]);
 
+  // ESC closes the modal
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>
-            {filename ?? task.role} · <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{task.status}</span>
-          </h3>
-          <button className="close-btn" onClick={onClose}>
+          <div>
+            <h3>{ROLE_TITLE[task.role] ?? task.role}</h3>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+              {filename} · {TASK_STATUS_LABEL[task.status] ?? task.status}
+            </div>
+          </div>
+          <button className="close-btn" onClick={onClose} aria-label="close">
             ✕
           </button>
         </div>
         <div className="modal-body">
           {task.status !== "done" && (
             <div style={{ color: "var(--text-muted)" }}>
-              Artifact not available — task is {task.status}.
+              Artifact not available — task is{" "}
+              {TASK_STATUS_LABEL[task.status] ?? task.status}.
               {task.error && <pre style={{ marginTop: 12 }}>{task.error}</pre>}
             </div>
           )}
@@ -55,7 +60,13 @@ export function ArtifactViewer({ projectId, task, onClose }: Props) {
           {error && (
             <div style={{ color: "var(--security)" }}>Error: {error}</div>
           )}
-          {content && <div className="markdown">{content}</div>}
+          {content && (
+            <div className="prose">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
       </div>
     </div>
