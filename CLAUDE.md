@@ -45,3 +45,19 @@ docs/design/      HTML UI mockups (design reference)
 - SSE events use `event_type:data` format (e.g., `task:completed`)
 - Task JSON follows the 5-field payload: title, description, design, acceptance_criteria, notes
 - Color palette: metallic (gold, rose gold, teal, purple, sky blue)
+
+## Git Workflow (strict)
+
+Three-tier branching — **the same rule applies to this repo and to every project the orchestrator generates**:
+
+```
+feature/<task>  →  master (integration)  →  main (stable, public)
+```
+
+- **Never commit directly to `main`.** `main` is the public-facing branch and only receives merges from `master` after integration is verified.
+- Every piece of work starts on a feature branch cut from `master` (e.g. `feature/stage1-pipeline`, `fix/wave-engine-race`).
+- Merge feature → `master` when the work is complete and (for Stage 2) tests pass.
+- Merge `master` → `main` only at a clean checkpoint (sprint boundary, milestone) and only with explicit user approval.
+- The Lead agent is the sole merger for generated projects. Coding agents never merge.
+
+The Config Generator (Bridge step) must propagate this rule into every generated project's `CLAUDE.md` **and** into each per-role agent instruction file, so coding agents see it in their immediate context and don't accidentally branch off or merge into `main`.
