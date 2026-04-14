@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Orchestrator — Color Split Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; padding: 20px; transition: background 0.4s; }
+
+  h1 { text-align: center; margin-bottom: 4px; font-size: 22px; }
+  .subtitle { text-align: center; margin-bottom: 24px; font-size: 13px; }
+
+  .mode-toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+  .mode-btn { padding: 8px 20px; border-radius: 20px; border: 1.5px solid; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 500; transition: all 0.3s; }
+
+  /* ============================================ */
+  /* DARK MODE                                    */
+  /* ============================================ */
+  body.dark { background: #1E1C22; color: #ccc8c0; }
+  .dark h1 { color: #e8e4da; }
+  .dark .subtitle { color: #6a6660; }
+  .dark .mode-btn { background: transparent; color: #6a6660; border-color: #2a2828; }
+  .dark .mode-btn:hover { border-color: #D4AF37; color: #D4AF37; }
+  .dark .mode-btn.active { background: #1a1815; border-color: #D4AF37; color: #D4AF37; }
+
+  .dark .board { background: #252330; border: 1px solid #35333F; border-radius: 16px; overflow: hidden; max-width: 960px; margin: 0 auto; }
+  .dark .board-header { padding: 16px 20px; border-bottom: 1px solid #35333F; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .dark .board-header h2 { font-size: 17px; color: #e8e4da; }
+  .dark .header-right { display: flex; align-items: center; gap: 10px; }
+  .dark .progress-bar { width: 160px; height: 7px; background: #2E2C38; border-radius: 4px; overflow: hidden; }
+  .dark .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #D4AF37, #E8C87A); }
+  .dark .progress-text { font-size: 12px; color: #8a8680; }
+  .dark .stage-badge { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; background: #1e1a28; color: #9B8EC4; }
+
+  .dark .sprint-list { padding: 14px; }
+  .dark .sprint { margin-bottom: 10px; }
+  .dark .sprint-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; cursor: pointer; background: #2A2838; transition: background 0.2s; }
+  .dark .sprint-header:hover { background: #302E3C; }
+  .dark .sprint-icon { font-size: 12px; color: #5a5860; width: 16px; }
+  .dark .sprint-name { font-weight: 600; font-size: 14px; flex: 1; color: #e0dcd5; }
+  .dark .sprint-stats { font-size: 12px; color: #6a6660; }
+  .dark .sprint-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+  .dark .status-completed { background: #1a2520; color: #6DBFB0; }
+  .dark .status-running { background: #1e1a10; color: #D4AF37; }
+  .dark .status-pending { background: #2A2838; color: #6a6660; }
+
+  .dark .hybrid-sprint { margin-bottom: 10px; }
+  .dark .active-border { border: 1.5px solid #D4AF37 !important; border-radius: 10px 10px 0 0; }
+  .dark .hybrid-expanded { background: #28262F; border: 1px solid #35333F; border-top: none; border-radius: 0 0 12px 12px; }
+  .dark .hybrid-kanban { display: flex; gap: 12px; padding: 14px; }
+  .dark .hybrid-col { flex: 1; min-width: 150px; }
+  .dark .hybrid-col-header { font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; color: #5a5860; }
+
+  /* BASE CARD — dark */
+  .dark .card { background: #2E2C38; border: 1px solid #3A3845; border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.25s; position: relative; }
+  .dark .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .dark .card-title { font-size: 13px; font-weight: 500; margin-bottom: 5px; color: #e0dcd5; }
+  .dark .card-meta { font-size: 11px; color: #6a6660; display: flex; justify-content: space-between; align-items: center; }
+  .dark .card-type { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .dark .card-status-icon { font-size: 15px; }
+  .dark .agent-badge { display: flex; align-items: center; gap: 4px; }
+  .dark .agent-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* TASK TYPE — left border (always present, never changes) */
+  .dark .card.type-border-be      { border-left: 3.5px solid #5AADA0; }
+  .dark .card.type-border-fe      { border-left: 3.5px solid #C4907A; }
+  .dark .card.type-border-arch    { border-left: 3.5px solid #8A80B8; }
+  .dark .card.type-border-security{ border-left: 3.5px solid #B87A8A; }
+  .dark .card.type-border-devops  { border-left: 3.5px solid #9B8EC4; }
+  .dark .card.type-border-test    { border-left: 3.5px solid #68A8D4; }
+  .dark .card.type-border-human   { border-left: 3.5px solid #E8C87A; }
+  .dark .card.type-border-prd     { border-left: 3.5px solid #A0988A; }
+  .dark .card.type-border-review  { border-left: 3.5px solid #A898C4; }
+
+  /* STATUS — card visual treatment (changes with lifecycle) */
+  .dark .card.status-pending  { opacity: 0.45; }
+  .dark .card.status-running  { opacity: 1; animation: shimmer-dark 2.5s ease-in-out infinite; box-shadow: 0 0 20px rgba(212,175,55,0.1); }
+  .dark .card.status-blocked  { opacity: 0.85; background: #332E28; }
+  .dark .card.status-done     { opacity: 0.7; }
+  .dark .card.status-error    { opacity: 0.9; background: #332828; }
+  .dark .card.status-flagged  { opacity: 0.9; border-style: dashed; border-color: #D4AF37; }
+
+  @keyframes shimmer-dark {
+    0%, 100% { box-shadow: 0 0 12px rgba(212,175,55,0.05); }
+    50% { box-shadow: 0 0 24px rgba(212,175,55,0.12); }
+  }
+
+  .dark .card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(212,175,55,0.08); }
+
+  /* Type badges */
+  .dark .type-be       { background: #122525; color: #6DBFB0; }
+  .dark .type-fe       { background: #251a1e; color: #C4907A; }
+  .dark .type-test     { background: #121e2a; color: #68A8D4; }
+  .dark .type-human    { background: #25201a; color: #E8C87A; }
+  .dark .type-devops   { background: #1a1a28; color: #9B8EC4; }
+  .dark .type-arch     { background: #1a1a28; color: #8A80B8; }
+  .dark .type-security { background: #251a20; color: #B87A8A; }
+  .dark .type-prd      { background: #201e1a; color: #A0988A; }
+  .dark .type-review   { background: #1e1a28; color: #A898C4; }
+
+  .dark .collapsed-tasks { padding: 4px 0 4px 30px; font-size: 12px; color: #4a4848; }
+  .dark .collapsed-tasks span { margin-right: 8px; }
+
+  /* ============================================ */
+  /* LIGHT MODE                                   */
+  /* ============================================ */
+  body.light { background: #F5F2EB; color: #4a4540; }
+  .light h1 { color: #2a2520; }
+  .light .subtitle { color: #9a9590; }
+  .light .mode-btn { background: transparent; color: #9a9590; border-color: #ddd8d0; }
+  .light .mode-btn:hover { border-color: #B8962E; color: #B8962E; }
+  .light .mode-btn.active { background: #fff; border-color: #B8962E; color: #B8962E; }
+
+  .light .board { background: #FDFBF5; border: 1px solid #E5E0D5; border-radius: 16px; overflow: hidden; max-width: 960px; margin: 0 auto; box-shadow: 0 4px 24px rgba(80,60,30,0.04); }
+  .light .board-header { padding: 16px 20px; border-bottom: 1px solid #E5E0D5; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .light .board-header h2 { font-size: 17px; color: #2a2520; }
+  .light .header-right { display: flex; align-items: center; gap: 10px; }
+  .light .progress-bar { width: 160px; height: 7px; background: #EDE8DD; border-radius: 4px; overflow: hidden; }
+  .light .progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #B8962E, #D4AF37); }
+  .light .progress-text { font-size: 12px; color: #8a8580; }
+  .light .stage-badge { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; background: #EDE5F5; color: #7B6FA8; }
+
+  .light .sprint-list { padding: 14px; }
+  .light .sprint { margin-bottom: 10px; }
+  .light .sprint-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; cursor: pointer; background: #F5F0E8; transition: background 0.2s; }
+  .light .sprint-header:hover { background: #EDE8DD; }
+  .light .sprint-icon { font-size: 12px; color: #b0aa9a; width: 16px; }
+  .light .sprint-name { font-weight: 600; font-size: 14px; flex: 1; color: #2a2520; }
+  .light .sprint-stats { font-size: 12px; color: #a09a8a; }
+  .light .sprint-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+  .light .status-completed { background: #E0F2EC; color: #2A7A6A; }
+  .light .status-running { background: #FFF5D5; color: #8A7020; }
+  .light .status-pending { background: #F0EDE5; color: #a09a8a; }
+
+  .light .hybrid-sprint { margin-bottom: 10px; }
+  .light .active-border { border: 1.5px solid #B8962E !important; border-radius: 10px 10px 0 0; }
+  .light .hybrid-expanded { background: #FAF7F0; border: 1px solid #E5E0D5; border-top: none; border-radius: 0 0 12px 12px; }
+  .light .hybrid-kanban { display: flex; gap: 12px; padding: 14px; }
+  .light .hybrid-col { flex: 1; min-width: 150px; }
+  .light .hybrid-col-header { font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; color: #b0aa9a; }
+
+  /* BASE CARD — light */
+  .light .card { background: #fff; border: 1px solid #E5E0D5; border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.25s; position: relative; box-shadow: 0 1px 3px rgba(80,60,30,0.04); }
+  .light .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .light .card-title { font-size: 13px; font-weight: 500; margin-bottom: 5px; color: #2a2520; }
+  .light .card-meta { font-size: 11px; color: #a09a8a; display: flex; justify-content: space-between; align-items: center; }
+  .light .card-type { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .light .card-status-icon { font-size: 15px; }
+  .light .agent-badge { display: flex; align-items: center; gap: 4px; }
+  .light .agent-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* TASK TYPE — left border */
+  .light .card.type-border-be      { border-left: 3.5px solid #4A9A8E; }
+  .light .card.type-border-fe      { border-left: 3.5px solid #B8806A; }
+  .light .card.type-border-arch    { border-left: 3.5px solid #7A70A8; }
+  .light .card.type-border-security{ border-left: 3.5px solid #A8687A; }
+  .light .card.type-border-devops  { border-left: 3.5px solid #8A7EB4; }
+  .light .card.type-border-test    { border-left: 3.5px solid #5A96B8; }
+  .light .card.type-border-human   { border-left: 3.5px solid #D4B060; }
+  .light .card.type-border-prd     { border-left: 3.5px solid #90887A; }
+  .light .card.type-border-review  { border-left: 3.5px solid #9888B4; }
+
+  /* STATUS — card visual treatment */
+  .light .card.status-pending  { opacity: 0.45; }
+  .light .card.status-running  { opacity: 1; box-shadow: 0 2px 16px rgba(184,150,46,0.1); animation: shimmer-light 2.5s ease-in-out infinite; }
+  .light .card.status-blocked  { opacity: 0.9; background: #FFF8F0; }
+  .light .card.status-done     { opacity: 0.7; }
+  .light .card.status-error    { opacity: 0.9; background: #FFF0F0; }
+  .light .card.status-flagged  { opacity: 0.9; border-style: dashed; border-color: #B8962E; }
+
+  @keyframes shimmer-light {
+    0%, 100% { box-shadow: 0 2px 12px rgba(184,150,46,0.06); }
+    50% { box-shadow: 0 4px 24px rgba(184,150,46,0.14); }
+  }
+
+  .light .card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(80,60,30,0.08); }
+
+  /* Type badges */
+  .light .type-be       { background: #E0F2EC; color: #2A7A6A; }
+  .light .type-fe       { background: #F5E5E0; color: #9A6050; }
+  .light .type-test     { background: #E0EEF5; color: #3A7098; }
+  .light .type-human    { background: #FFF0D0; color: #9A7A20; }
+  .light .type-devops   { background: #EDE5F5; color: #6A5A98; }
+  .light .type-arch     { background: #E8E0F5; color: #5A4A88; }
+  .light .type-security { background: #F5E0E8; color: #8A5A6A; }
+  .light .type-prd      { background: #EDEAE0; color: #6A6458; }
+  .light .type-review   { background: #EDE0F5; color: #7A5AA0; }
+
+  .light .collapsed-tasks { padding: 4px 0 4px 30px; font-size: 12px; color: #c0bab0; }
+  .light .collapsed-tasks span { margin-right: 8px; }
+
+  /* ============================================ */
+  /* LEGEND                                       */
+  /* ============================================ */
+  .legend { max-width: 960px; margin: 30px auto 0; padding: 20px; border-radius: 12px; display: flex; gap: 40px; }
+  .dark .legend { background: #252330; border: 1px solid #35333F; }
+  .light .legend { background: #FDFBF5; border: 1px solid #E5E0D5; }
+  .legend-section { flex: 1; }
+  .legend-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .dark .legend-title { color: #6a6660; }
+  .light .legend-title { color: #a09a8a; }
+  .legend-items { display: flex; flex-direction: column; gap: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .dark .legend-item { color: #8a8680; }
+  .light .legend-item { color: #8a8580; }
+  .legend-swatch { width: 24px; height: 4px; border-radius: 2px; flex-shrink: 0; }
+  .legend-status-swatch { width: 24px; height: 18px; border-radius: 4px; border: 1px solid; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+
+  /* Status demo cards in legend */
+  .dark .ls-pending  { background: #2E2C38; border-color: #3A3845; opacity: 0.4; }
+  .dark .ls-running  { background: #2E2C38; border-color: #D4AF37; box-shadow: 0 0 8px rgba(212,175,55,0.15); }
+  .dark .ls-blocked  { background: #332E28; border-color: #3A3845; }
+  .dark .ls-done     { background: #2E2C38; border-color: #3A3845; opacity: 0.6; }
+  .dark .ls-error    { background: #332828; border-color: #453535; }
+  .dark .ls-flagged  { background: #2E2C38; border-color: #D4AF37; border-style: dashed; }
+
+  .light .ls-pending  { background: #fff; border-color: #E5E0D5; opacity: 0.4; }
+  .light .ls-running  { background: #fff; border-color: #B8962E; box-shadow: 0 0 8px rgba(184,150,46,0.15); }
+  .light .ls-blocked  { background: #FFF8F0; border-color: #E5E0D5; }
+  .light .ls-done     { background: #fff; border-color: #E5E0D5; opacity: 0.6; }
+  .light .ls-error    { background: #FFF0F0; border-color: #E5D0D0; }
+  .light .ls-flagged  { background: #fff; border-color: #B8962E; border-style: dashed; }
+</style>
+</head>
+<body class="dark">
+
+<h1>Left Border = Type &nbsp;|&nbsp; Card State = Status</h1>
+<p class="subtitle">Two independent visual channels. No confusion.</p>
+
+<div class="mode-toggle">
+  <button class="mode-btn active" onclick="setMode('dark')">Dark</button>
+  <button class="mode-btn" onclick="setMode('light')">Light</button>
+</div>
+
+<div class="board">
+  <div class="board-header">
+    <h2>Todo App with Auth</h2>
+    <div class="header-right">
+      <span class="stage-badge">Sprint 2 / 4</span>
+      <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+      <span class="progress-text">45%</span>
+    </div>
+  </div>
+  <div class="sprint-list">
+
+    <!-- Stage 1 -->
+    <div class="sprint" style="opacity:0.5;">
+      <div class="sprint-header">
+        <span class="sprint-icon">&#9654;</span>
+        <span class="sprint-name">Stage 1: Planning Docs</span>
+        <span class="sprint-stats">8 docs</span>
+        <span class="sprint-status status-completed">&#10003; Done</span>
+      </div>
+    </div>
+
+    <!-- Sprint 1 -->
+    <div class="sprint">
+      <div class="sprint-header">
+        <span class="sprint-icon">&#9654;</span>
+        <span class="sprint-name">Sprint 1: Infrastructure</span>
+        <span class="sprint-stats">5/5</span>
+        <span class="sprint-status status-completed">&#10003; Done</span>
+      </div>
+    </div>
+
+    <!-- Sprint 2 EXPANDED -->
+    <div class="hybrid-sprint">
+      <div class="sprint-header active-border">
+        <span class="sprint-icon">&#9660;</span>
+        <span class="sprint-name">Sprint 2: Core Backend</span>
+        <span class="sprint-stats">1/4</span>
+        <span class="sprint-status status-running">&#10227; Running</span>
+      </div>
+      <div class="hybrid-expanded">
+        <div class="hybrid-kanban">
+          <!-- RUNNING column -->
+          <div class="hybrid-col">
+            <div class="hybrid-col-header">&#10227; Running (2)</div>
+
+            <!-- Backend task — RUNNING -->
+            <div class="card type-border-be status-running">
+              <div class="card-header">
+                <span class="card-type type-be">Backend</span>
+                <span class="card-status-icon">&#10227;</span>
+              </div>
+              <div class="card-title">Auth API (JWT + OAuth)</div>
+              <div class="card-meta">
+                <span class="agent-badge"><span class="agent-dot" style="background:#5AADA0"></span>BE-1</span>
+                <span>45s</span>
+              </div>
+            </div>
+
+            <!-- Test task — RUNNING -->
+            <div class="card type-border-test status-running">
+              <div class="card-header">
+                <span class="card-type type-test">Test</span>
+                <span class="card-status-icon">&#10227;</span>
+              </div>
+              <div class="card-title">Auth API Tests (TDD)</div>
+              <div class="card-meta">
+                <span class="agent-badge"><span class="agent-dot" style="background:#68A8D4"></span>QA-1</span>
+                <span>22s</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCKED column -->
+          <div class="hybrid-col">
+            <div class="hybrid-col-header">&#9888; Blocked (1)</div>
+
+            <!-- Human action — BLOCKED -->
+            <div class="card type-border-human status-blocked">
+              <div class="card-header">
+                <span class="card-type type-human">Human</span>
+                <span class="card-status-icon">&#9888;</span>
+              </div>
+              <div class="card-title">Setup Supabase Credentials</div>
+              <div class="card-meta"><span style="color:#E8C87A;">Action needed</span></div>
+            </div>
+          </div>
+
+          <!-- DONE column -->
+          <div class="hybrid-col">
+            <div class="hybrid-col-header">&#10003; Done (1)</div>
+
+            <!-- Security task — DONE -->
+            <div class="card type-border-security status-done">
+              <div class="card-header">
+                <span class="card-type type-security">Security</span>
+                <span class="card-status-icon">&#10003;</span>
+              </div>
+              <div class="card-title">Setup RLS Policies</div>
+              <div class="card-meta">
+                <span class="agent-badge"><span class="agent-dot" style="background:#B87A8A"></span>Sec-1</span>
+                <span>1m 48s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sprint 3 -->
+    <div class="sprint">
+      <div class="sprint-header">
+        <span class="sprint-icon">&#9654;</span>
+        <span class="sprint-name">Sprint 3: Frontend</span>
+        <span class="sprint-stats">0/3</span>
+        <span class="sprint-status status-pending">&#9675; Pending</span>
+      </div>
+      <div class="collapsed-tasks">
+        <span>&#8226; Login Page</span>
+        <span>&#8226; Dashboard</span>
+        <span>&#8226; Settings</span>
+      </div>
+    </div>
+
+    <!-- Sprint 4 -->
+    <div class="sprint">
+      <div class="sprint-header">
+        <span class="sprint-icon">&#9654;</span>
+        <span class="sprint-name">Sprint 4: Integration</span>
+        <span class="sprint-stats">0/4</span>
+        <span class="sprint-status status-pending">&#9675; Pending</span>
+      </div>
+      <div class="collapsed-tasks">
+        <span>&#8226; E2E Tests</span>
+        <span>&#8226; Error Handling</span>
+        <span>&#8226; Security Audit</span>
+        <span>&#8226; Performance</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-section">
+    <div class="legend-title">Left Border = Task Type</div>
+    <div class="legend-items">
+      <div class="legend-item"><div class="legend-swatch" style="background:#5AADA0;"></div>Backend</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#C4907A;"></div>Frontend</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#8A80B8;"></div>Architecture</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#B87A8A;"></div>Security</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#9B8EC4;"></div>DevOps</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#68A8D4;"></div>QA / Test</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#E8C87A;"></div>Human Action</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#A0988A;"></div>PRD</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#A898C4;"></div>Review</div>
+    </div>
+  </div>
+  <div class="legend-section">
+    <div class="legend-title">Card State = Status</div>
+    <div class="legend-items">
+      <div class="legend-item"><div class="legend-status-swatch ls-pending"></div>Pending — faded out</div>
+      <div class="legend-item"><div class="legend-status-swatch ls-running">&#10227;</div>Running — gold glow + pulse</div>
+      <div class="legend-item"><div class="legend-status-swatch ls-blocked">&#9888;</div>Blocked — warm tinted bg</div>
+      <div class="legend-item"><div class="legend-status-swatch ls-done">&#10003;</div>Done — reduced opacity</div>
+      <div class="legend-item"><div class="legend-status-swatch ls-error">&#10007;</div>Error — red tinted bg</div>
+      <div class="legend-item"><div class="legend-status-swatch ls-flagged">&#9873;</div>Flagged — dashed border</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setMode(mode) {
+  document.body.className = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

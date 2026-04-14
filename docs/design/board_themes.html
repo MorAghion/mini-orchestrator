@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Orchestrator — Theme Comparison</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e1e4e8; padding: 20px; font-family: 'Inter', sans-serif; }
+
+  h1 { text-align: center; margin-bottom: 6px; font-size: 26px; color: #fff; }
+  .subtitle { text-align: center; color: #8b949e; margin-bottom: 30px; font-size: 14px; }
+
+  /* Tabs */
+  .tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; }
+  .tab { padding: 10px 20px; border-radius: 20px; border: 2px solid #333; background: transparent; color: #aaa; cursor: pointer; font-size: 14px; transition: all 0.3s; font-family: inherit; }
+  .tab:hover { border-color: #666; color: #fff; }
+  .tab.active { color: #fff; }
+
+  /* Theme sections */
+  .theme-section { display: none; }
+  .theme-section.active { display: block; }
+
+  .theme-label { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .theme-desc { text-align: center; font-size: 13px; margin-bottom: 20px; }
+
+  /* Mode toggle */
+  .mode-toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+  .mode-btn { padding: 6px 16px; border-radius: 16px; border: 1px solid #444; background: transparent; color: #aaa; cursor: pointer; font-size: 12px; transition: all 0.2s; font-family: inherit; }
+  .mode-btn.active { background: #fff2; color: #fff; border-color: #888; }
+
+  /* ===== BOARD (shared structure) ===== */
+  .board { border-radius: 16px; overflow: hidden; max-width: 900px; margin: 0 auto; transition: all 0.3s; }
+  .board-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .board-header h2 { font-size: 18px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .progress-bar { width: 160px; height: 8px; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .progress-text { font-size: 13px; }
+  .stage-badge { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+
+  .sprint-list { padding: 14px; }
+  .sprint { margin-bottom: 12px; }
+  .sprint-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+  .sprint-icon { font-size: 12px; width: 16px; }
+  .sprint-name { font-weight: 600; font-size: 14px; flex: 1; }
+  .sprint-stats { font-size: 12px; }
+  .sprint-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 500; }
+
+  .hybrid-sprint { margin-bottom: 12px; }
+  .hybrid-expanded { border-radius: 0 0 12px 12px; margin-top: -2px; }
+  .hybrid-kanban { display: flex; gap: 12px; padding: 14px; }
+  .hybrid-col { flex: 1; min-width: 150px; }
+  .hybrid-col-header { font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+
+  .card { border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+  .card:hover { transform: translateY(-1px); }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .card-type { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-status { font-size: 14px; }
+  .card-title { font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+  .card-meta { font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+  .agent-badge { display: flex; align-items: center; gap: 4px; }
+  .agent-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  .collapsed-tasks { padding: 4px 0 4px 30px; font-size: 12px; }
+  .collapsed-tasks span { margin-right: 8px; }
+
+  @keyframes pulse-warm { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 16px rgba(255,107,107,0.15); } }
+  @keyframes pulse-retro { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 16px rgba(124,58,237,0.2); } }
+  @keyframes pulse-earth { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 16px rgba(45,106,79,0.15); } }
+
+  /* ================================================ */
+  /* THEME A: WARM & PLAYFUL                          */
+  /* ================================================ */
+
+  /* Dark mode (default) */
+  .warm-dark .board { background: #1e1520; border: 1px solid #3d2d3a; }
+  .warm-dark .board-header { border-bottom: 1px solid #3d2d3a; }
+  .warm-dark .board-header h2 { color: #ffddd2; font-family: 'DM Sans', sans-serif; }
+  .warm-dark .progress-bar { background: #2d1f28; }
+  .warm-dark .progress-fill { background: linear-gradient(90deg, #ff6b6b, #ffa94d); }
+  .warm-dark .progress-text { color: #c9a0a0; }
+  .warm-dark .stage-badge { background: #3d2040; color: #ff9ff3; }
+  .warm-dark .sprint-header { background: #2a1e28; }
+  .warm-dark .sprint-header:hover { background: #352530; }
+  .warm-dark .sprint-name { color: #ffddd2; font-family: 'DM Sans', sans-serif; }
+  .warm-dark .sprint-stats { color: #a0808a; }
+  .warm-dark .sprint-status { font-weight: 600; }
+  .warm-dark .status-completed { background: #2a3025; color: #7bed9f; }
+  .warm-dark .status-running { background: #3d2040; color: #ff9ff3; }
+  .warm-dark .status-pending { background: #2a2228; color: #a0808a; }
+  .warm-dark .hybrid-expanded { background: #241a22; border: 1px solid #3d2d3a; }
+  .warm-dark .hybrid-col-header { color: #a0808a; }
+  .warm-dark .card { background: #2a2028; border: 1px solid #3d2d3a; }
+  .warm-dark .card:hover { border-color: #ff6b6b; }
+  .warm-dark .card-title { color: #ffddd2; font-family: 'DM Sans', sans-serif; }
+  .warm-dark .card-meta { color: #a0808a; }
+  .warm-dark .card.running { border-left: 3px solid #ff6b6b; animation: pulse-warm 2s infinite; }
+  .warm-dark .card.blocked { border-left: 3px solid #ffa94d; opacity: 0.85; }
+  .warm-dark .card.done { border-left: 3px solid #7bed9f; opacity: 0.7; }
+  .warm-dark .card.pending { border-left: 3px solid #4a3a45; opacity: 0.5; }
+  .warm-dark .type-be { background: #1a3025; color: #7bed9f; }
+  .warm-dark .type-fe { background: #3d2040; color: #ff9ff3; }
+  .warm-dark .type-test { background: #3a3020; color: #feca57; }
+  .warm-dark .type-human { background: #3a2a10; color: #ffa94d; }
+  .warm-dark .type-devops { background: #20203a; color: #a29bfe; }
+  .warm-dark .type-arch { background: #1a2535; color: #74b9ff; }
+  .warm-dark .collapsed-tasks { color: #6a5060; }
+  .warm-dark .active-border { border: 2px solid #ff6b6b !important; border-radius: 10px 10px 0 0; }
+
+  /* Light mode */
+  .warm-light .board { background: #fff8f3; border: 1px solid #f0d5c5; }
+  .warm-light .board-header { border-bottom: 1px solid #f0d5c5; }
+  .warm-light .board-header h2 { color: #5a2d2d; font-family: 'DM Sans', sans-serif; }
+  .warm-light .progress-bar { background: #f5e0d0; }
+  .warm-light .progress-fill { background: linear-gradient(90deg, #ff6b6b, #ffa94d); }
+  .warm-light .progress-text { color: #8a5a5a; }
+  .warm-light .stage-badge { background: #ffe0f0; color: #c44088; }
+  .warm-light .sprint-header { background: #fff0e8; }
+  .warm-light .sprint-header:hover { background: #ffe8d8; }
+  .warm-light .sprint-name { color: #5a2d2d; font-family: 'DM Sans', sans-serif; }
+  .warm-light .sprint-stats { color: #b08080; }
+  .warm-light .status-completed { background: #e0f5e0; color: #2d7a2d; }
+  .warm-light .status-running { background: #ffe0f0; color: #c44088; }
+  .warm-light .status-pending { background: #f5e8e0; color: #b08080; }
+  .warm-light .hybrid-expanded { background: #fff5f0; border: 1px solid #f0d5c5; }
+  .warm-light .hybrid-col-header { color: #b08080; }
+  .warm-light .card { background: #fff; border: 1px solid #f0d5c5; box-shadow: 0 2px 8px rgba(200,150,130,0.08); }
+  .warm-light .card:hover { border-color: #ff6b6b; box-shadow: 0 4px 12px rgba(255,107,107,0.12); }
+  .warm-light .card-title { color: #4a2020; font-family: 'DM Sans', sans-serif; }
+  .warm-light .card-meta { color: #b08080; }
+  .warm-light .card.running { border-left: 3px solid #ff6b6b; animation: pulse-warm 2s infinite; }
+  .warm-light .card.blocked { border-left: 3px solid #ffa94d; }
+  .warm-light .card.done { border-left: 3px solid #51cf66; opacity: 0.75; }
+  .warm-light .card.pending { border-left: 3px solid #e0c8c0; opacity: 0.5; }
+  .warm-light .type-be { background: #e0f5e0; color: #2d7a2d; }
+  .warm-light .type-fe { background: #ffe0f0; color: #c44088; }
+  .warm-light .type-test { background: #fff5d5; color: #9a7b00; }
+  .warm-light .type-human { background: #fff0d5; color: #c87000; }
+  .warm-light .type-devops { background: #e8e0ff; color: #6c5ce7; }
+  .warm-light .type-arch { background: #d5eeff; color: #2d7aba; }
+  .warm-light .collapsed-tasks { color: #c0a8a0; }
+  .warm-light .active-border { border: 2px solid #ff6b6b !important; border-radius: 10px 10px 0 0; }
+
+  /* ================================================ */
+  /* THEME B: RETRO / NEON                            */
+  /* ================================================ */
+
+  .retro-dark .board { background: #0f0e1a; border: 1px solid #2a2545; font-family: 'Space Grotesk', sans-serif; }
+  .retro-dark .board-header { border-bottom: 1px solid #2a2545; }
+  .retro-dark .board-header h2 { color: #e0d4ff; }
+  .retro-dark .progress-bar { background: #1a1830; }
+  .retro-dark .progress-fill { background: linear-gradient(90deg, #7c3aed, #06b6d4); }
+  .retro-dark .progress-text { color: #8a80aa; }
+  .retro-dark .stage-badge { background: #2a1545; color: #c084fc; }
+  .retro-dark .sprint-header { background: #161430; }
+  .retro-dark .sprint-header:hover { background: #1e1a3a; }
+  .retro-dark .sprint-name { color: #e0d4ff; }
+  .retro-dark .sprint-stats { color: #6a60aa; }
+  .retro-dark .status-completed { background: #0a2a20; color: #34d399; }
+  .retro-dark .status-running { background: #2a1545; color: #c084fc; }
+  .retro-dark .status-pending { background: #1a1830; color: #6a60aa; }
+  .retro-dark .hybrid-expanded { background: #12102a; border: 1px solid #2a2545; }
+  .retro-dark .hybrid-col-header { color: #6a60aa; }
+  .retro-dark .card { background: #181530; border: 1px solid #2a2545; }
+  .retro-dark .card:hover { border-color: #7c3aed; box-shadow: 0 0 12px rgba(124,58,237,0.15); }
+  .retro-dark .card-title { color: #e0d4ff; }
+  .retro-dark .card-meta { color: #6a60aa; }
+  .retro-dark .card.running { border-left: 3px solid #7c3aed; animation: pulse-retro 2s infinite; }
+  .retro-dark .card.blocked { border-left: 3px solid #f59e0b; opacity: 0.85; }
+  .retro-dark .card.done { border-left: 3px solid #34d399; opacity: 0.7; }
+  .retro-dark .card.pending { border-left: 3px solid #2a2545; opacity: 0.5; }
+  .retro-dark .type-be { background: #0a2a20; color: #34d399; }
+  .retro-dark .type-fe { background: #0a2035; color: #06b6d4; }
+  .retro-dark .type-test { background: #2a2510; color: #fbbf24; }
+  .retro-dark .type-human { background: #2a1a05; color: #f59e0b; }
+  .retro-dark .type-devops { background: #2a1545; color: #c084fc; }
+  .retro-dark .type-arch { background: #15103a; color: #818cf8; }
+  .retro-dark .collapsed-tasks { color: #4a4070; }
+  .retro-dark .active-border { border: 2px solid #7c3aed !important; border-radius: 10px 10px 0 0; }
+
+  .retro-light .board { background: #f8f5ff; border: 1px solid #e0d5f5; font-family: 'Space Grotesk', sans-serif; }
+  .retro-light .board-header { border-bottom: 1px solid #e0d5f5; }
+  .retro-light .board-header h2 { color: #2d1b69; }
+  .retro-light .progress-bar { background: #e8e0f5; }
+  .retro-light .progress-fill { background: linear-gradient(90deg, #7c3aed, #06b6d4); }
+  .retro-light .progress-text { color: #7a6aaa; }
+  .retro-light .stage-badge { background: #ede5ff; color: #7c3aed; }
+  .retro-light .sprint-header { background: #f0eaff; }
+  .retro-light .sprint-header:hover { background: #e8e0ff; }
+  .retro-light .sprint-name { color: #2d1b69; }
+  .retro-light .sprint-stats { color: #9a8acc; }
+  .retro-light .status-completed { background: #d5fff0; color: #0d7a5f; }
+  .retro-light .status-running { background: #ede5ff; color: #7c3aed; }
+  .retro-light .status-pending { background: #f0eaff; color: #9a8acc; }
+  .retro-light .hybrid-expanded { background: #f4f0ff; border: 1px solid #e0d5f5; }
+  .retro-light .hybrid-col-header { color: #9a8acc; }
+  .retro-light .card { background: #fff; border: 1px solid #e0d5f5; box-shadow: 0 2px 8px rgba(124,58,237,0.06); }
+  .retro-light .card:hover { border-color: #7c3aed; box-shadow: 0 4px 12px rgba(124,58,237,0.1); }
+  .retro-light .card-title { color: #2d1b69; }
+  .retro-light .card-meta { color: #9a8acc; }
+  .retro-light .card.running { border-left: 3px solid #7c3aed; }
+  .retro-light .card.blocked { border-left: 3px solid #f59e0b; }
+  .retro-light .card.done { border-left: 3px solid #10b981; opacity: 0.75; }
+  .retro-light .card.pending { border-left: 3px solid #d5caee; opacity: 0.5; }
+  .retro-light .type-be { background: #d5fff0; color: #0d7a5f; }
+  .retro-light .type-fe { background: #d5f5ff; color: #0891b2; }
+  .retro-light .type-test { background: #fff8d5; color: #a17e00; }
+  .retro-light .type-human { background: #fff0d5; color: #c87b00; }
+  .retro-light .type-devops { background: #ede5ff; color: #7c3aed; }
+  .retro-light .type-arch { background: #e0e0ff; color: #4f46e5; }
+  .retro-light .collapsed-tasks { color: #b8a8dd; }
+  .retro-light .active-border { border: 2px solid #7c3aed !important; border-radius: 10px 10px 0 0; }
+
+  /* ================================================ */
+  /* THEME C: NATURE / EARTHY                         */
+  /* ================================================ */
+
+  /* --- Dark A: Deep Espresso (dark walnut wood) --- */
+  .earth-dark-a .board { background: #18150F; border: 1px solid #3A3428; font-family: 'DM Sans', sans-serif; }
+  .earth-dark-a .board-header { border-bottom: 1px solid #3A3428; }
+  .earth-dark-a .board-header h2 { color: #e8e0d0; }
+  .earth-dark-a .progress-bar { background: #211D15; }
+  .earth-dark-a .progress-fill { background: linear-gradient(90deg, #2d6a4f, #95d5b2); }
+  .earth-dark-a .progress-text { color: #a09080; }
+  .earth-dark-a .stage-badge { background: #2a1a15; color: #e76f51; }
+  .earth-dark-a .sprint-header { background: #211D15; }
+  .earth-dark-a .sprint-header:hover { background: #28231A; }
+  .earth-dark-a .sprint-name { color: #e8e0d0; }
+  .earth-dark-a .sprint-stats { color: #8a7a6a; }
+  .earth-dark-a .status-completed { background: #1a3025; color: #95d5b2; }
+  .earth-dark-a .status-running { background: #2a1a15; color: #e76f51; }
+  .earth-dark-a .status-pending { background: #211D15; color: #8a7a6a; }
+  .earth-dark-a .hybrid-expanded { background: #1E1A12; border: 1px solid #3A3428; }
+  .earth-dark-a .hybrid-col-header { color: #8a7a6a; }
+  .earth-dark-a .card { background: #28231A; border: 1px solid #3A3428; }
+  .earth-dark-a .card:hover { border-color: #2d6a4f; }
+  .earth-dark-a .card-title { color: #e8e0d0; }
+  .earth-dark-a .card-meta { color: #8a7a6a; }
+  .earth-dark-a .card.running { border-left: 3px solid #e76f51; animation: pulse-earth 2s infinite; }
+  .earth-dark-a .card.blocked { border-left: 3px solid #f4a261; opacity: 0.85; }
+  .earth-dark-a .card.done { border-left: 3px solid #95d5b2; opacity: 0.7; }
+  .earth-dark-a .card.pending { border-left: 3px solid #3A3428; opacity: 0.5; }
+  .earth-dark-a .type-be { background: #1a3025; color: #95d5b2; }
+  .earth-dark-a .type-fe { background: #15252a; color: #a8dadc; }
+  .earth-dark-a .type-test { background: #2a2815; color: #f4a261; }
+  .earth-dark-a .type-human { background: #2a1a10; color: #e76f51; }
+  .earth-dark-a .type-devops { background: #1a2030; color: #90b8d0; }
+  .earth-dark-a .type-arch { background: #1a1a2a; color: #a8a0d0; }
+  .earth-dark-a .collapsed-tasks { color: #6a5a4a; }
+  .earth-dark-a .active-border { border: 2px solid #e76f51 !important; border-radius: 10px 10px 0 0; }
+
+  /* --- Dark B: Soft Umber (cozy dim room) --- */
+  .earth-dark-b .board { background: #23201A; border: 1px solid #3D3730; font-family: 'DM Sans', sans-serif; }
+  .earth-dark-b .board-header { border-bottom: 1px solid #3D3730; }
+  .earth-dark-b .board-header h2 { color: #ede5d5; }
+  .earth-dark-b .progress-bar { background: #2A2620; }
+  .earth-dark-b .progress-fill { background: linear-gradient(90deg, #2d6a4f, #95d5b2); }
+  .earth-dark-b .progress-text { color: #a89880; }
+  .earth-dark-b .stage-badge { background: #2a1a15; color: #e76f51; }
+  .earth-dark-b .sprint-header { background: #2A2620; }
+  .earth-dark-b .sprint-header:hover { background: #302B22; }
+  .earth-dark-b .sprint-name { color: #ede5d5; }
+  .earth-dark-b .sprint-stats { color: #908070; }
+  .earth-dark-b .status-completed { background: #1e3528; color: #95d5b2; }
+  .earth-dark-b .status-running { background: #2e1c16; color: #e76f51; }
+  .earth-dark-b .status-pending { background: #2A2620; color: #908070; }
+  .earth-dark-b .hybrid-expanded { background: #272320; border: 1px solid #3D3730; }
+  .earth-dark-b .hybrid-col-header { color: #908070; }
+  .earth-dark-b .card { background: #302B22; border: 1px solid #3D3730; }
+  .earth-dark-b .card:hover { border-color: #2d6a4f; }
+  .earth-dark-b .card-title { color: #ede5d5; }
+  .earth-dark-b .card-meta { color: #908070; }
+  .earth-dark-b .card.running { border-left: 3px solid #e76f51; animation: pulse-earth 2s infinite; }
+  .earth-dark-b .card.blocked { border-left: 3px solid #f4a261; opacity: 0.85; }
+  .earth-dark-b .card.done { border-left: 3px solid #95d5b2; opacity: 0.7; }
+  .earth-dark-b .card.pending { border-left: 3px solid #3D3730; opacity: 0.5; }
+  .earth-dark-b .type-be { background: #1a3025; color: #95d5b2; }
+  .earth-dark-b .type-fe { background: #15252a; color: #a8dadc; }
+  .earth-dark-b .type-test { background: #2a2815; color: #f4a261; }
+  .earth-dark-b .type-human { background: #2a1a10; color: #e76f51; }
+  .earth-dark-b .type-devops { background: #1a2030; color: #90b8d0; }
+  .earth-dark-b .type-arch { background: #1a1a2a; color: #a8a0d0; }
+  .earth-dark-b .collapsed-tasks { color: #7a6a5a; }
+  .earth-dark-b .active-border { border: 2px solid #e76f51 !important; border-radius: 10px 10px 0 0; }
+
+  /* --- Dark C: Neutral Slate (balanced, hint of warmth) --- */
+  .earth-dark-c .board { background: #1A1A1A; border: 1px solid #383838; font-family: 'DM Sans', sans-serif; }
+  .earth-dark-c .board-header { border-bottom: 1px solid #383838; }
+  .earth-dark-c .board-header h2 { color: #e8e4de; }
+  .earth-dark-c .progress-bar { background: #222222; }
+  .earth-dark-c .progress-fill { background: linear-gradient(90deg, #2d6a4f, #95d5b2); }
+  .earth-dark-c .progress-text { color: #9a9590; }
+  .earth-dark-c .stage-badge { background: #2a1a15; color: #e76f51; }
+  .earth-dark-c .sprint-header { background: #222222; }
+  .earth-dark-c .sprint-header:hover { background: #2A2A28; }
+  .earth-dark-c .sprint-name { color: #e8e4de; }
+  .earth-dark-c .sprint-stats { color: #888580; }
+  .earth-dark-c .status-completed { background: #1a3025; color: #95d5b2; }
+  .earth-dark-c .status-running { background: #2a1a15; color: #e76f51; }
+  .earth-dark-c .status-pending { background: #222222; color: #888580; }
+  .earth-dark-c .hybrid-expanded { background: #1E1E1E; border: 1px solid #383838; }
+  .earth-dark-c .hybrid-col-header { color: #888580; }
+  .earth-dark-c .card { background: #2A2A28; border: 1px solid #383838; }
+  .earth-dark-c .card:hover { border-color: #2d6a4f; }
+  .earth-dark-c .card-title { color: #e8e4de; }
+  .earth-dark-c .card-meta { color: #888580; }
+  .earth-dark-c .card.running { border-left: 3px solid #e76f51; animation: pulse-earth 2s infinite; }
+  .earth-dark-c .card.blocked { border-left: 3px solid #f4a261; opacity: 0.85; }
+  .earth-dark-c .card.done { border-left: 3px solid #95d5b2; opacity: 0.7; }
+  .earth-dark-c .card.pending { border-left: 3px solid #383838; opacity: 0.5; }
+  .earth-dark-c .type-be { background: #1a3025; color: #95d5b2; }
+  .earth-dark-c .type-fe { background: #15252a; color: #a8dadc; }
+  .earth-dark-c .type-test { background: #2a2815; color: #f4a261; }
+  .earth-dark-c .type-human { background: #2a1a10; color: #e76f51; }
+  .earth-dark-c .type-devops { background: #1a2030; color: #90b8d0; }
+  .earth-dark-c .type-arch { background: #1a1a2a; color: #a8a0d0; }
+  .earth-dark-c .collapsed-tasks { color: #686868; }
+  .earth-dark-c .active-border { border: 2px solid #e76f51 !important; border-radius: 10px 10px 0 0; }
+
+  .earth-light .board { background: #F5F0E6; border: 1px solid #DDD5C0; font-family: 'DM Sans', sans-serif; }
+  .earth-light .board-header { border-bottom: 1px solid #DDD5C0; }
+  .earth-light .board-header h2 { color: #3a3025; }
+  .earth-light .progress-bar { background: #E5DDD0; }
+  .earth-light .progress-fill { background: linear-gradient(90deg, #2d6a4f, #52b788); }
+  .earth-light .progress-text { color: #7a6a55; }
+  .earth-light .stage-badge { background: #fde8e0; color: #c45030; }
+  .earth-light .sprint-header { background: #EDE6DA; }
+  .earth-light .sprint-header:hover { background: #E5DDD0; }
+  .earth-light .sprint-name { color: #3a3025; }
+  .earth-light .sprint-stats { color: #9a8a70; }
+  .earth-light .status-completed { background: #d5f0e0; color: #1a5a3a; }
+  .earth-light .status-running { background: #fde8e0; color: #c45030; }
+  .earth-light .status-pending { background: #EDE6DA; color: #9a8a70; }
+  .earth-light .hybrid-expanded { background: #F0EADF; border: 1px solid #DDD5C0; }
+  .earth-light .hybrid-col-header { color: #9a8a70; }
+  .earth-light .card { background: #FFFCF5; border: 1px solid #DDD5C0; box-shadow: 0 2px 8px rgba(100,80,50,0.06); }
+  .earth-light .card:hover { border-color: #2d6a4f; box-shadow: 0 4px 12px rgba(45,106,79,0.1); }
+  .earth-light .card-title { color: #3a3025; }
+  .earth-light .card-meta { color: #9a8a70; }
+  .earth-light .card.running { border-left: 3px solid #e76f51; }
+  .earth-light .card.blocked { border-left: 3px solid #f4a261; }
+  .earth-light .card.done { border-left: 3px solid #52b788; opacity: 0.75; }
+  .earth-light .card.pending { border-left: 3px solid #d5ccc0; opacity: 0.5; }
+  .earth-light .type-be { background: #d5f0e0; color: #1a5a3a; }
+  .earth-light .type-fe { background: #d5eef0; color: #1a5a6a; }
+  .earth-light .type-test { background: #fff0d5; color: #9a6a00; }
+  .earth-light .type-human { background: #fde8e0; color: #c45030; }
+  .earth-light .type-devops { background: #d5e5f0; color: #2a5070; }
+  .earth-light .type-arch { background: #e0e0f0; color: #4a4a7a; }
+  .earth-light .collapsed-tasks { color: #b0a080; }
+  .earth-light .active-border { border: 2px solid #e76f51 !important; border-radius: 10px 10px 0 0; }
+</style>
+</head>
+<body>
+
+<h1>Theme Comparison — Hybrid Board</h1>
+<p class="subtitle">Same board, 3 different vibes. Toggle light/dark mode for each.</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTheme('warm')" id="tab-warm" style="border-color:#ff6b6b; color:#ff6b6b;">Warm & Playful</div>
+  <div class="tab" onclick="showTheme('retro')" id="tab-retro">Retro / Neon</div>
+  <div class="tab" onclick="showTheme('earth')" id="tab-earth">Nature / Earthy</div>
+</div>
+
+<!-- ===== WARM ===== -->
+<div id="theme-warm" class="theme-section active">
+  <p class="theme-label" style="color:#ff6b6b;">Warm & Playful</p>
+  <p class="theme-desc" style="color:#a08080;">Soft coral, amber, pink. Friendly and inviting. Like Notion meets a sunset.</p>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('warm','dark')">Dark</button>
+    <button class="mode-btn" onclick="setMode('warm','light')">Light</button>
+  </div>
+  <div id="warm-board" class="warm-dark">
+    <div class="board">
+      <div class="board-header">
+        <h2>Todo App with Auth</h2>
+        <div class="header-right">
+          <span class="stage-badge">Sprint 2 / 4</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+          <span class="progress-text">45%</span>
+        </div>
+      </div>
+      <div class="sprint-list">
+        <div class="sprint" style="opacity:0.5;">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Stage 1: Planning Docs</span>
+            <span class="sprint-stats">8 docs</span>
+            <span class="sprint-status status-completed">&#10003; Done</span>
+          </div>
+        </div>
+        <div class="sprint">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Sprint 1: Infrastructure</span>
+            <span class="sprint-stats">5/5</span>
+            <span class="sprint-status status-completed">&#10003; Done</span>
+          </div>
+        </div>
+        <div class="hybrid-sprint">
+          <div class="sprint-header active-border">
+            <span class="sprint-icon" style="color:inherit;">&#9660;</span>
+            <span class="sprint-name">Sprint 2: Core Backend</span>
+            <span class="sprint-stats">0/3</span>
+            <span class="sprint-status status-running">&#10227; Running</span>
+          </div>
+          <div class="hybrid-expanded">
+            <div class="hybrid-kanban">
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#10227; Running (2)</div>
+                <div class="card running">
+                  <div class="card-header"><span class="card-type type-be">BE</span><span class="card-status">&#10227;</span></div>
+                  <div class="card-title">Auth API (JWT + OAuth)</div>
+                  <div class="card-meta"><span class="agent-badge"><span class="agent-dot" style="background:#7bed9f"></span>BE-1</span><span>45s</span></div>
+                </div>
+                <div class="card running">
+                  <div class="card-header"><span class="card-type type-test">TEST</span><span class="card-status">&#10227;</span></div>
+                  <div class="card-title">Auth API Tests</div>
+                  <div class="card-meta"><span class="agent-badge"><span class="agent-dot" style="background:#feca57"></span>QA-1</span><span>22s</span></div>
+                </div>
+              </div>
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#9888; Blocked (1)</div>
+                <div class="card blocked">
+                  <div class="card-header"><span class="card-type type-human">HUMAN</span><span class="card-status">&#9888;</span></div>
+                  <div class="card-title">Setup Supabase Credentials</div>
+                  <div class="card-meta"><span style="color:#ffa94d;">Action needed</span></div>
+                </div>
+              </div>
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#10003; Done (0)</div>
+                <div style="font-size:12px; font-style:italic; padding:10px; opacity:0.4;">Nothing yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sprint">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Sprint 3: Frontend</span>
+            <span class="sprint-stats">0/3</span>
+            <span class="sprint-status status-pending">&#9675; Pending</span>
+          </div>
+          <div class="collapsed-tasks"><span>&#8226; Login</span><span>&#8226; Dashboard</span><span>&#8226; Settings</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RETRO ===== -->
+<div id="theme-retro" class="theme-section">
+  <p class="theme-label" style="color:#7c3aed;">Retro / Neon</p>
+  <p class="theme-desc" style="color:#8a80aa;">Bold purple, cyan, gold. Developer energy with personality.</p>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('retro','dark')">Dark</button>
+    <button class="mode-btn" onclick="setMode('retro','light')">Light</button>
+  </div>
+  <div id="retro-board" class="retro-dark">
+    <div class="board">
+      <div class="board-header">
+        <h2>Todo App with Auth</h2>
+        <div class="header-right">
+          <span class="stage-badge">Sprint 2 / 4</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+          <span class="progress-text">45%</span>
+        </div>
+      </div>
+      <div class="sprint-list">
+        <div class="sprint" style="opacity:0.5;">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Stage 1: Planning Docs</span>
+            <span class="sprint-stats">8 docs</span>
+            <span class="sprint-status status-completed">&#10003; Done</span>
+          </div>
+        </div>
+        <div class="sprint">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Sprint 1: Infrastructure</span>
+            <span class="sprint-stats">5/5</span>
+            <span class="sprint-status status-completed">&#10003; Done</span>
+          </div>
+        </div>
+        <div class="hybrid-sprint">
+          <div class="sprint-header active-border">
+            <span class="sprint-icon" style="color:inherit;">&#9660;</span>
+            <span class="sprint-name">Sprint 2: Core Backend</span>
+            <span class="sprint-stats">0/3</span>
+            <span class="sprint-status status-running">&#10227; Running</span>
+          </div>
+          <div class="hybrid-expanded">
+            <div class="hybrid-kanban">
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#10227; Running (2)</div>
+                <div class="card running">
+                  <div class="card-header"><span class="card-type type-be">BE</span><span class="card-status">&#10227;</span></div>
+                  <div class="card-title">Auth API (JWT + OAuth)</div>
+                  <div class="card-meta"><span class="agent-badge"><span class="agent-dot" style="background:#34d399"></span>BE-1</span><span>45s</span></div>
+                </div>
+                <div class="card running">
+                  <div class="card-header"><span class="card-type type-test">TEST</span><span class="card-status">&#10227;</span></div>
+                  <div class="card-title">Auth API Tests</div>
+                  <div class="card-meta"><span class="agent-badge"><span class="agent-dot" style="background:#fbbf24"></span>QA-1</span><span>22s</span></div>
+                </div>
+              </div>
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#9888; Blocked (1)</div>
+                <div class="card blocked">
+                  <div class="card-header"><span class="card-type type-human">HUMAN</span><span class="card-status">&#9888;</span></div>
+                  <div class="card-title">Setup Supabase Credentials</div>
+                  <div class="card-meta"><span style="color:#f59e0b;">Action needed</span></div>
+                </div>
+              </div>
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#10003; Done (0)</div>
+                <div style="font-size:12px; font-style:italic; padding:10px; opacity:0.4;">Nothing yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sprint">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Sprint 3: Frontend</span>
+            <span class="sprint-stats">0/3</span>
+            <span class="sprint-status status-pending">&#9675; Pending</span>
+          </div>
+          <div class="collapsed-tasks"><span>&#8226; Login</span><span>&#8226; Dashboard</span><span>&#8226; Settings</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EARTH ===== -->
+<div id="theme-earth" class="theme-section">
+  <p class="theme-label" style="color:#2d6a4f;">Nature / Earthy</p>
+  <p class="theme-desc" style="color:#6a9a7a;">Forest green, terracotta, sandy gold. Organic and calm but distinctive.</p>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('earth','dark-a')">Dark A: Espresso</button>
+    <button class="mode-btn" onclick="setMode('earth','dark-b')">Dark B: Umber</button>
+    <button class="mode-btn" onclick="setMode('earth','dark-c')">Dark C: Slate</button>
+    <button class="mode-btn" onclick="setMode('earth','light')">Light</button>
+  </div>
+  <div id="earth-board" class="earth-dark-a">
+    <div class="board">
+      <div class="board-header">
+        <h2>Todo App with Auth</h2>
+        <div class="header-right">
+          <span class="stage-badge">Sprint 2 / 4</span>
+          <div class="progress-bar"><div class="progress-fill" style="width:45%"></div></div>
+          <span class="progress-text">45%</span>
+        </div>
+      </div>
+      <div class="sprint-list">
+        <div class="sprint" style="opacity:0.5;">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Stage 1: Planning Docs</span>
+            <span class="sprint-stats">8 docs</span>
+            <span class="sprint-status status-completed">&#10003; Done</span>
+          </div>
+        </div>
+        <div class="sprint">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Sprint 1: Infrastructure</span>
+            <span class="sprint-stats">5/5</span>
+            <span class="sprint-status status-completed">&#10003; Done</span>
+          </div>
+        </div>
+        <div class="hybrid-sprint">
+          <div class="sprint-header active-border">
+            <span class="sprint-icon" style="color:inherit;">&#9660;</span>
+            <span class="sprint-name">Sprint 2: Core Backend</span>
+            <span class="sprint-stats">0/3</span>
+            <span class="sprint-status status-running">&#10227; Running</span>
+          </div>
+          <div class="hybrid-expanded">
+            <div class="hybrid-kanban">
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#10227; Running (2)</div>
+                <div class="card running">
+                  <div class="card-header"><span class="card-type type-be">BE</span><span class="card-status">&#10227;</span></div>
+                  <div class="card-title">Auth API (JWT + OAuth)</div>
+                  <div class="card-meta"><span class="agent-badge"><span class="agent-dot" style="background:#95d5b2"></span>BE-1</span><span>45s</span></div>
+                </div>
+                <div class="card running">
+                  <div class="card-header"><span class="card-type type-test">TEST</span><span class="card-status">&#10227;</span></div>
+                  <div class="card-title">Auth API Tests</div>
+                  <div class="card-meta"><span class="agent-badge"><span class="agent-dot" style="background:#f4a261"></span>QA-1</span><span>22s</span></div>
+                </div>
+              </div>
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#9888; Blocked (1)</div>
+                <div class="card blocked">
+                  <div class="card-header"><span class="card-type type-human">HUMAN</span><span class="card-status">&#9888;</span></div>
+                  <div class="card-title">Setup Supabase Credentials</div>
+                  <div class="card-meta"><span style="color:#e76f51;">Action needed</span></div>
+                </div>
+              </div>
+              <div class="hybrid-col">
+                <div class="hybrid-col-header">&#10003; Done (0)</div>
+                <div style="font-size:12px; font-style:italic; padding:10px; opacity:0.4;">Nothing yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sprint">
+          <div class="sprint-header">
+            <span class="sprint-icon">&#9654;</span>
+            <span class="sprint-name">Sprint 3: Frontend</span>
+            <span class="sprint-stats">0/3</span>
+            <span class="sprint-status status-pending">&#9675; Pending</span>
+          </div>
+          <div class="collapsed-tasks"><span>&#8226; Login</span><span>&#8226; Dashboard</span><span>&#8226; Settings</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTheme(name) {
+  document.querySelectorAll('.theme-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.style.borderColor = '#333'; t.style.color = '#aaa'; });
+  document.getElementById('theme-' + name).classList.add('active');
+  const btn = document.getElementById('tab-' + name);
+  btn.classList.add('active');
+  const colors = { warm: '#ff6b6b', retro: '#7c3aed', earth: '#2d6a4f' };
+  btn.style.borderColor = colors[name];
+  btn.style.color = colors[name];
+}
+
+function setMode(theme, mode) {
+  const board = document.getElementById(theme + '-board');
+  board.className = theme + '-' + mode;
+  const section = document.getElementById('theme-' + theme);
+  section.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>
