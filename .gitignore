@@ -26,6 +26,7 @@ tests/smoke_runs/*/
 # Node
 node_modules/
 frontend/dist/
+*.tsbuildinfo
 
 # IDE
 .vscode/
