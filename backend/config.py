@@ -8,7 +8,7 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 MAX_CONCURRENT_AGENTS = int(os.getenv("MAX_CONCURRENT_AGENTS", "3"))
-AGENT_MODEL = os.getenv("AGENT_MODEL", "claude-sonnet-4-20250514")
+AGENT_MODEL = os.getenv("AGENT_MODEL", "claude-opus-4-6")
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 
 # Paths
