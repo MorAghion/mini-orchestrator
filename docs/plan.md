@@ -32,7 +32,7 @@ User inputs project idea
    COMPLETE when all PRD tasks done + tests passing
 ```
 
-**Stack**: Python (FastAPI) + Claude API orchestrator, Claude Code CLI for coding agents, React (Vite) frontend, SQLite + JSON files for persistence
+**Stack**: Python (FastAPI) orchestrator that shells out to the Claude Code CLI for **every** agent call (Lead, doc agents, reviewer, coders), React (Vite) frontend, SQLite + JSON files for persistence. The entire system runs on the user's Claude subscription (Max plan) — no Anthropic API key required.
 
 ---
 
@@ -40,20 +40,22 @@ User inputs project idea
 
 ### Agent Types (not singletons — Lead spawns N instances)
 
-| Agent | Stage 1 | Stage 2 | Tool | Notes |
-|-------|---------|---------|------|-------|
-| **Lead** | Plans doc waves | Breaks PRD into tasks, assigns sprints, manages handoffs, merges branches | Claude API | Coordinator only, never codes |
-| **Architect** | ARCHITECTURE.md | Structural refactors | Claude Code CLI | |
-| **PRD Writer** | PRD.md | — | Claude API | Stage 1 only |
-| **Backend Dev** | BACKEND.md | APIs, DB, logic | Claude Code CLI | |
-| **Frontend Dev** | FRONTEND.md + styling | Components, pages | Claude Code CLI | Also handles CSS/design tokens |
-| **Security Analyst** | SECURITY.md | Auth, RLS, rate limiting | Claude Code CLI | |
-| **DevOps** | ENV.md | Docker, CI/CD, env | Claude Code CLI | |
-| **UI Designer** | UI_DESIGN_SYSTEM.md | — | Claude API | Stage 1 only |
-| **Screen Designer** | SCREENS.md | — | Claude API | Stage 1 only |
-| **Reviewer** | Cross-doc review | — | Claude API | Stage 1 only |
-| **QA/Test Agent** | — | Writes tests (TDD), E2E | Claude Code CLI | |
-| **Config Generator** | — | CLAUDE.md + settings | Claude API | Bridge step |
+Every agent executes via the Claude Code CLI — `claude -p ...` in print mode. For Stage 1 doc / Lead / Reviewer roles, `--tools ""` disables all built-in tools (they only emit text or schema-validated JSON). For Stage 2 coding agents, the CLI runs with its normal toolset (Bash, Edit, Read, etc.) inside the agent's branch worktree.
+
+| Agent | Stage 1 | Stage 2 | Notes |
+|-------|---------|---------|-------|
+| **Lead** | Plans doc waves | Breaks PRD into tasks, assigns sprints, manages handoffs, merges branches | Coordinator only, never codes |
+| **Architect** | ARCHITECTURE.md | Structural refactors | |
+| **PRD Writer** | PRD.md | — | Stage 1 only |
+| **Backend Dev** | BACKEND.md | APIs, DB, logic | |
+| **Frontend Dev** | FRONTEND.md + styling | Components, pages | Also handles CSS/design tokens |
+| **Security Analyst** | SECURITY.md | Auth, RLS, rate limiting | |
+| **DevOps** | ENV.md | Docker, CI/CD, env | |
+| **UI Designer** | UI_DESIGN_SYSTEM.md | — | Stage 1 only |
+| **Screen Designer** | SCREENS.md | — | Stage 1 only |
+| **Reviewer** | Cross-doc review | — | Stage 1 only |
+| **QA/Test Agent** | — | Writes tests (TDD), E2E | |
+| **Config Generator** | — | CLAUDE.md + settings | Bridge step |
 
 `MAX_CONCURRENT_AGENTS` configurable (default: 3). Wave engine uses semaphore.
 

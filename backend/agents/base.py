@@ -1,22 +1,30 @@
-"""Shared Claude API loop used by all Stage 1 agents.
+"""Shared Claude Code CLI loop used by all Stage 1 agents.
+
+All agents consume the user's Claude subscription (Max plan) by shelling out
+to the `claude` CLI in print mode — no Anthropic API key required.
 
 Responsibilities:
-- Construct requests against the Anthropic SDK with prompt caching on the system prompt.
-- Support plain text completions, tool-use loops, and structured (JSON-schema) outputs.
-- Keep per-agent state (name, role, model) minimal — the blackboard holds state.
+- Spawn `claude -p ...` subprocesses asynchronously.
+- Capture the JSON envelope and extract `result` (text) or `structured_output` (JSON-schema-validated).
+- Disable all built-in tools (`--tools ""`) so agents only produce text / structured JSON.
+- Skip session persistence and CLAUDE.md auto-discovery so each call is self-contained.
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from backend.config import AGENT_MODEL
 
-from backend.config import AGENT_MODEL, ANTHROPIC_API_KEY
+
+class CLIError(RuntimeError):
+    """Raised when the `claude` CLI exits non-zero or returns an error envelope."""
 
 
 class BaseAgent:
-    """Base class — subclasses provide role + system prompt and call self.complete()/self.structured()."""
+    """Subclasses provide role + system prompt and call self.complete() / self.structured()."""
 
     def __init__(
         self,
@@ -24,55 +32,80 @@ class BaseAgent:
         role: str,
         system_prompt: str,
         model: str = AGENT_MODEL,
-        max_tokens: int = 16000,
+        max_tokens: int = 16000,  # advisory; CLI honors its own model limits
     ):
         self.name = name
         self.role = role
         self.system_prompt = system_prompt
         self.model = model
         self.max_tokens = max_tokens
-        self._client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
-    def _cached_system(self) -> list[dict[str, Any]]:
-        """Render the system prompt as a single cacheable block."""
+    def _base_cmd(self, user_message: str) -> list[str]:
+        """Common argv. System prompt replaces the default (not appended)."""
         return [
-            {
-                "type": "text",
-                "text": self.system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }
+            "claude",
+            "-p",
+            user_message,
+            "--system-prompt",
+            self.system_prompt,
+            "--model",
+            self.model,
+            "--tools",
+            "",  # disable all tools — agents produce text/JSON only
+            "--output-format",
+            "json",
+            "--no-session-persistence",
         ]
 
-    async def complete(self, user_message: str) -> str:
-        """Single-turn completion; returns the assistant's text."""
-        response = await self._client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=self._cached_system(),
-            messages=[{"role": "user", "content": user_message}],
+    async def _run(self, cmd: list[str]) -> dict[str, Any]:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        for block in response.content:
-            if block.type == "text":
-                return block.text
-        return ""
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            raise CLIError(
+                f"{self.name}: claude exited {proc.returncode}: "
+                f"{stderr.decode(errors='replace')[:500]}"
+            )
+        try:
+            envelope = json.loads(stdout.decode())
+        except json.JSONDecodeError as e:
+            raise CLIError(
+                f"{self.name}: could not parse CLI envelope: {e}\n"
+                f"stdout head: {stdout[:500]!r}"
+            ) from e
+        if envelope.get("is_error"):
+            raise CLIError(
+                f"{self.name}: CLI reported error: {envelope.get('result', '')[:500]}"
+            )
+        return envelope
+
+    async def complete(self, user_message: str) -> str:
+        """Single-turn text completion; returns the assistant's `result` text."""
+        envelope = await self._run(self._base_cmd(user_message))
+        return str(envelope.get("result", "")).strip()
 
     async def structured(
         self,
         user_message: str,
         schema: dict[str, Any],
-        tool_name: str = "emit_result",
     ) -> dict[str, Any]:
-        """Force a structured response matching `schema`.
+        """Request schema-validated JSON via the CLI's `--json-schema` flag.
 
-        Implemented via a forced tool call — this is the most portable way to get
-        validated JSON across SDK versions.
+        The CLI enforces the schema server-side and places the parsed object on
+        `envelope.structured_output`.
         """
-        return await self.tool_call(
-            user_message=user_message,
-            tool_name=tool_name,
-            tool_description="Emit the structured result as typed input.",
-            tool_schema=schema,
-        )
+        cmd = self._base_cmd(user_message) + ["--json-schema", json.dumps(schema)]
+        envelope = await self._run(cmd)
+        structured = envelope.get("structured_output")
+        if not isinstance(structured, dict):
+            raise CLIError(
+                f"{self.name}: envelope lacks structured_output; "
+                f"result head: {str(envelope.get('result', ''))[:300]}"
+            )
+        return structured
 
     async def tool_call(
         self,
@@ -81,23 +114,11 @@ class BaseAgent:
         tool_description: str,
         tool_schema: dict[str, Any],
     ) -> dict[str, Any]:
-        """Force a single tool call and return the parsed input dict. Used by the Lead
-        to emit its wave plan as a typed object rather than free-form JSON."""
-        response = await self._client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=self._cached_system(),
-            messages=[{"role": "user", "content": user_message}],
-            tools=[
-                {
-                    "name": tool_name,
-                    "description": tool_description,
-                    "input_schema": tool_schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": tool_name},
-        )
-        for block in response.content:
-            if block.type == "tool_use" and block.name == tool_name:
-                return block.input  # already parsed by SDK
-        raise RuntimeError(f"{self.name}: expected tool_use for {tool_name}")
+        """Compatibility shim for the previous API-based interface.
+
+        The CLI path does not have forced tool calls the way the API does; the
+        equivalent is schema-validated structured output. `tool_name` and
+        `tool_description` are unused here — the schema alone constrains the shape.
+        """
+        del tool_name, tool_description  # unused
+        return await self.structured(user_message, tool_schema)

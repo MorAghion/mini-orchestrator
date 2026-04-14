@@ -9,9 +9,9 @@ A mini AI orchestration system that takes a project idea and builds the entire p
 
 ## Tech Stack
 
-- **Backend**: Python 3.11+, FastAPI, SQLite, Anthropic Claude API
+- **Backend**: Python 3.11+, FastAPI, SQLite
 - **Frontend**: React (Vite), CSS with metallic color palette
-- **Agent execution**: Claude Code CLI (Stage 2 coding agents)
+- **Agent execution**: Claude Code CLI for **all** agents — Lead, Stage 1 doc agents, and Stage 2 coding agents alike. Every call shells out to `claude -p ...` and consumes the user's Claude subscription (Max plan). No Anthropic API key is required.
 - **Persistence**: JSON files (source of truth) + SQLite (UI queries)
 
 ## Project Structure
@@ -32,7 +32,8 @@ docs/design/      HTML UI mockups (design reference)
 ## Key Architecture Decisions
 
 - **Blackboard pattern**: Agents never communicate directly. All state flows through JSON files + SQLite.
-- **Lead agent**: Claude API only (never codes). Coordinates, plans sprints, manages handoffs, merges branches.
+- **Claude CLI for every agent**: Every Lead/doc/reviewer/coder call shells out to `claude -p` with `--system-prompt`, `--model`, `--tools ""` (disabled), and `--output-format json`. Structured outputs use `--json-schema`. This lets the orchestrator run entirely on the user's Max subscription.
+- **Lead agent**: never codes. Coordinates, plans sprints, manages handoffs, merges branches. Still a dedicated role — just executed via the CLI like everyone else.
 - **Coding agents**: Claude Code CLI sessions, one branch per agent.
 - **TDD**: Test agent writes tests first, code agent implements, tests must pass.
 - **Task IDs**: Sequential (task-001, task-002). Lead is sole creator.
@@ -41,7 +42,7 @@ docs/design/      HTML UI mockups (design reference)
 ## Conventions
 
 - Agent system prompts live in `backend/agents/prompts/` as Python files
-- BaseAgent in `backend/agents/base.py` — all agents use this async Claude API loop
+- BaseAgent in `backend/agents/base.py` — all agents spawn the `claude` CLI via `asyncio.create_subprocess_exec`. It exposes `complete()` (text) and `structured()` (JSON-schema validated)
 - SSE events use `event_type:data` format (e.g., `task:completed`)
 - Task JSON follows the 5-field payload: title, description, design, acceptance_criteria, notes
 - Color palette: metallic (gold, rose gold, teal, purple, sky blue)

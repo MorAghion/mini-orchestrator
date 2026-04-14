@@ -16,8 +16,12 @@ build/
 # SQLite
 data/*.db
 
-# Generated project output
+# Generated project output (real runs)
 backend/output/*/
+
+# End-to-end smoke test output (pipeline runs used to verify the orchestrator itself)
+tests/smoke_runs/*/
+!tests/smoke_runs/.gitkeep
 
 # Node
 node_modules/
