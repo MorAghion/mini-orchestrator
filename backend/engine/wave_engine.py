@@ -20,7 +20,11 @@ from backend.agents.lead import LeadAgent
 from backend.agents.reviewer import ReviewerAgent
 from backend.agents.worker import DocWorkerAgent
 from backend.config import DB_PATH, MAX_CONCURRENT_AGENTS
-from backend.engine.artifact_store import save_artifact, save_review_report
+from backend.engine.artifact_store import (
+    load_artifacts,
+    save_artifact,
+    save_review_report,
+)
 from backend.engine.event_bus import EventBus
 from backend.models.events import Event, EventType
 from backend.models.project import (
@@ -73,13 +77,15 @@ async def _record_wave(
     number: int,
     roles: list[AgentRole],
     is_rework: bool = False,
+    is_revision: bool = False,
 ) -> str:
     wave_id = f"wave-{uuid.uuid4().hex[:12]}"
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT INTO waves (id, project_id, number, roles, status, is_rework, started_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO waves (id, project_id, number, roles, status, "
+            "is_rework, is_revision, started_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 wave_id,
                 project_id,
@@ -87,6 +93,7 @@ async def _record_wave(
                 json.dumps([r.value for r in roles]),
                 WaveStatus.RUNNING.value,
                 1 if is_rework else 0,
+                1 if is_revision else 0,
                 now,
             ),
         )
@@ -330,3 +337,109 @@ async def run_stage1(
         # Ensure SSE subscribers unblock even on unhandled exceptions
         if bus is not None:
             await bus.close_project(project.id)
+
+
+# ---------------------------------------------------------------------------
+# Revision: user-requested re-run of a subset of doc agents after Stage 1 done
+# ---------------------------------------------------------------------------
+
+async def run_revision(
+    project_id: str,
+    instruction: str,
+    affected_roles: list[AgentRole],
+    bus: EventBus | None = None,
+) -> dict[AgentRole, str]:
+    """Re-run `affected_roles` with the user's revision instruction injected
+    as feedback, then re-run the Reviewer over the updated artifact set.
+
+    Mechanically very close to the auto-rework cycle in `run_stage1`, but:
+    - triggered by user via /revise (not Reviewer's needs_rework verdict)
+    - the wave is recorded with `is_revision=True` (not is_rework)
+    - the project must already be in `stage1_done`; status doesn't change
+
+    Returns the updated artifacts for the affected roles. The Reviewer's
+    new verdict can be fetched via the existing review endpoint.
+    """
+    if not affected_roles:
+        raise ValueError("affected_roles cannot be empty")
+
+    # Pull the existing idea + load all current artifacts as prior context.
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT idea FROM projects WHERE id = ?", (project_id,))
+        row = await cur.fetchone()
+    if not row:
+        raise ValueError(f"project {project_id} not found")
+    idea = row[0]
+
+    artifacts = await load_artifacts(project_id)
+
+    # Compute the next wave number so the new wave sorts after existing ones.
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "SELECT COALESCE(MAX(number), 0) FROM waves WHERE project_id = ?",
+            (project_id,),
+        )
+        row = await cur.fetchone()
+    next_number = (row[0] if row else 0) + 1
+
+    wave_id = await _record_wave(
+        project_id, next_number, affected_roles, is_revision=True
+    )
+    await _emit(
+        bus, project_id, "wave:started",
+        wave_id=wave_id,
+        number=next_number,
+        roles=[r.value for r in affected_roles],
+        revision=True,
+    )
+
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
+    feedback = f"User-requested revision:\n\n{instruction.strip()}"
+
+    results = await asyncio.gather(
+        *[
+            _run_worker(
+                project_id,
+                wave_id,
+                role,
+                idea,
+                dict(artifacts),
+                feedback,
+                semaphore,
+                bus,
+            )
+            for role in affected_roles
+        ]
+    )
+
+    updated: dict[AgentRole, str] = {}
+    wave_failed = False
+    for role, content, err in results:
+        if err or content is None:
+            wave_failed = True
+            continue
+        artifacts[role] = content
+        updated[role] = content
+
+    await _complete_wave(
+        wave_id, WaveStatus.FAILED if wave_failed else WaveStatus.DONE
+    )
+    await _emit(
+        bus, project_id, "wave:completed",
+        wave_id=wave_id,
+        status=(WaveStatus.FAILED if wave_failed else WaveStatus.DONE).value,
+    )
+
+    if not wave_failed:
+        # Re-run the Reviewer over the new artifact set and persist its verdict.
+        reviewer = ReviewerAgent()
+        report = await reviewer.review(idea, artifacts)
+        await save_review_report(project_id, report)
+        await _emit(
+            bus, project_id,
+            "review:approved" if report.overall_verdict == "approved" else "review:needs_rework",
+            issue_count=len(report.issues),
+            summary=report.summary,
+        )
+
+    return updated

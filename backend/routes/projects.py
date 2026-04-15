@@ -23,8 +23,8 @@ from pydantic import BaseModel
 
 from backend.config import DB_PATH
 from backend.engine.artifact_store import project_dir
-from backend.engine.wave_engine import run_stage1
-from backend.models.project import ProjectStatus
+from backend.engine.wave_engine import run_revision, run_stage1
+from backend.models.project import AgentRole, ProjectStatus
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -125,6 +125,84 @@ async def launch_project(
 
 
 # ---------------------------------------------------------------------------
+# Revise — user-requested re-run after Stage 1 done
+# ---------------------------------------------------------------------------
+
+# When the user doesn't explicitly tell us which docs to revise, default to
+# the user-facing surface area — anything that touches features, UI, or
+# behavior. Backend / DevOps stay put unless the user names them.
+_DEFAULT_REVISION_ROLES: list[AgentRole] = [
+    AgentRole.PRD,
+    AgentRole.ARCHITECT,
+    AgentRole.BACKEND_DOC,
+    AgentRole.FRONTEND_DOC,
+    AgentRole.SECURITY_DOC,
+    AgentRole.UI_DESIGN_DOC,
+    AgentRole.SCREENS_DOC,
+]
+
+
+class ReviseRequest(BaseModel):
+    instruction: str
+    affected_roles: list[str] | None = None  # role.value strings
+
+
+@router.post("/{project_id}/revise", status_code=status.HTTP_202_ACCEPTED)
+async def revise_project(
+    project_id: str, body: ReviseRequest, request: Request
+) -> dict[str, Any]:
+    """Trigger a targeted re-run of selected doc agents + Reviewer.
+
+    Only valid when the project is in `stage1_done`. Validates the role list,
+    schedules `run_revision()` as a background task, and returns immediately.
+    Progress is observable via the SSE event stream + chat (Lead won't talk
+    here; the engine emits wave/task/artifact events same as Stage 1).
+    """
+    instruction = body.instruction.strip()
+    if not instruction:
+        raise HTTPException(status_code=400, detail="instruction cannot be empty")
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT status FROM projects WHERE id = ?", (project_id,))
+        row = await cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="project not found")
+    project_status = row[0]
+    if project_status != ProjectStatus.STAGE1_DONE.value:
+        raise HTTPException(
+            status_code=409,
+            detail=f"project is in '{project_status}' — revisions are only accepted in 'stage1_done'",
+        )
+
+    # Validate the requested roles, fall back to the safe default.
+    if body.affected_roles is None:
+        roles = _DEFAULT_REVISION_ROLES
+    else:
+        roles = []
+        for raw in body.affected_roles:
+            try:
+                role = AgentRole(raw)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
+            if role in (AgentRole.LEAD, AgentRole.REVIEWER):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"cannot revise {role.value} — it doesn't produce a doc artifact",
+                )
+            roles.append(role)
+        if not roles:
+            raise HTTPException(status_code=400, detail="affected_roles cannot be empty")
+
+    bus = request.app.state.event_bus
+    asyncio.create_task(run_revision(project_id, instruction, roles, bus=bus))
+    return {
+        "project_id": project_id,
+        "status": project_status,
+        "affected_roles": [r.value for r in roles],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Reads
 # ---------------------------------------------------------------------------
 
@@ -171,7 +249,8 @@ async def get_project(project_id: str) -> dict[str, Any]:
         }
 
         cur = await db.execute(
-            "SELECT id, number, roles, status, is_rework, started_at, completed_at "
+            "SELECT id, number, roles, status, is_rework, is_revision, "
+            "started_at, completed_at "
             "FROM waves WHERE project_id = ? ORDER BY number",
             (project_id,),
         )
@@ -182,8 +261,9 @@ async def get_project(project_id: str) -> dict[str, Any]:
                 "roles": json.loads(w[2]),
                 "status": w[3],
                 "is_rework": bool(w[4]),
-                "started_at": w[5],
-                "completed_at": w[6],
+                "is_revision": bool(w[5]),
+                "started_at": w[6],
+                "completed_at": w[7],
             }
             for w in await cur.fetchall()
         ]

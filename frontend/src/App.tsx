@@ -19,6 +19,8 @@ export function App() {
   const [openTask, setOpenTask] = useState<DocTask | null>(null);
   const [stage, setStage] = useState<Stage>("documents");
   const [launching, setLaunching] = useState(false);
+  const [pendingRevision, setPendingRevision] = useState<string | null>(null);
+  const [applyingRevision, setApplyingRevision] = useState(false);
 
   const { events, connected } = useEventStream(projectId);
   const { data, refetch } = useProject(projectId, events.length);
@@ -38,6 +40,11 @@ export function App() {
       await refetch();
       await refreshNotes();
     }
+    // Surface the revision suggestion (Lead's REVISION_REQUEST marker).
+    // Newest one wins; user can dismiss with Skip if not interested.
+    if (reply?.revision_request) {
+      setPendingRevision(reply.revision_request);
+    }
   };
 
   const handleLaunch = async () => {
@@ -49,6 +56,20 @@ export function App() {
       await refreshChat();
     } finally {
       setLaunching(false);
+    }
+  };
+
+  const handleApplyRevision = async (instruction: string) => {
+    if (!projectId) return;
+    setApplyingRevision(true);
+    try {
+      await api.reviseProject(projectId, instruction);
+      setPendingRevision(null);
+      // /revise schedules a background task; SSE events stream wave/task
+      // updates and useProject refreshes via events.length tick.
+      await refetch();
+    } finally {
+      setApplyingRevision(false);
     }
   };
 
@@ -109,6 +130,10 @@ export function App() {
             readyToLaunch={readyToLaunch}
             onLaunch={handleLaunch}
             launching={launching}
+            pendingRevision={pendingRevision}
+            onApplyRevision={handleApplyRevision}
+            onDismissRevision={() => setPendingRevision(null)}
+            applyingRevision={applyingRevision}
           />
           <PendingNotes notes={notes} onDrop={dropNote} />
           {status !== "shaping" && (

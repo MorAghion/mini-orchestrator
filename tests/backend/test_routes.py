@@ -184,3 +184,117 @@ async def test_note_chat_marker_writes_to_queue(client, mock_lead_chat):
     notes = (await client.get(f"/api/projects/{pid}/notes")).json()
     assert len(notes) == 1
     assert notes[0]["content"] == "don't forget emoji reactions"
+
+
+# ---------------------------------------------------------------------------
+# POST /api/projects/{id}/revise — targeted re-run after stage1_done
+# ---------------------------------------------------------------------------
+
+async def _force_status(project_id: str, status_value: str) -> None:
+    """Helper: directly set a project's status. Used to skip the live Stage 1
+    run when we want to exercise post-run endpoints in tests."""
+    import aiosqlite
+
+    from backend.config import DB_PATH
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE projects SET status = ? WHERE id = ?",
+            (status_value, project_id),
+        )
+        await db.commit()
+
+
+async def test_revise_404_unknown_project(client):
+    r = await client.post(
+        "/api/projects/proj-nope/revise", json={"instruction": "add dark mode"}
+    )
+    assert r.status_code == 404
+
+
+async def test_revise_400_empty_instruction(client):
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    await _force_status(pid, "stage1_done")
+    r = await client.post(f"/api/projects/{pid}/revise", json={"instruction": "   "})
+    assert r.status_code == 400
+
+
+async def test_revise_409_when_not_stage1_done(client):
+    # Project is in shaping; revise should refuse.
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    r = await client.post(f"/api/projects/{pid}/revise", json={"instruction": "go"})
+    assert r.status_code == 409
+
+
+async def test_revise_uses_default_role_set(client, no_real_engine_calls):
+    import asyncio
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    await _force_status(pid, "stage1_done")
+    r = await client.post(f"/api/projects/{pid}/revise", json={"instruction": "add dark mode"})
+    assert r.status_code == 202
+    body = r.json()
+    # Default set excludes lead/reviewer/devops_doc.
+    assert "prd" in body["affected_roles"]
+    assert "frontend_doc" in body["affected_roles"]
+    assert "devops_doc" not in body["affected_roles"]
+    assert "lead" not in body["affected_roles"]
+    # The route uses asyncio.create_task → yield once so the noop runs.
+    await asyncio.sleep(0)
+    assert len(no_real_engine_calls["run_revision"]) == 1
+
+
+async def test_revise_accepts_explicit_role_list(client, no_real_engine_calls):
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    await _force_status(pid, "stage1_done")
+    r = await client.post(
+        f"/api/projects/{pid}/revise",
+        json={"instruction": "tighten security", "affected_roles": ["security_doc"]},
+    )
+    assert r.status_code == 202
+    assert r.json()["affected_roles"] == ["security_doc"]
+
+
+async def test_revise_400_on_unknown_role(client):
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    await _force_status(pid, "stage1_done")
+    r = await client.post(
+        f"/api/projects/{pid}/revise",
+        json={"instruction": "x", "affected_roles": ["nonsense"]},
+    )
+    assert r.status_code == 400
+
+
+async def test_revise_400_on_lead_or_reviewer_in_role_list(client):
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    await _force_status(pid, "stage1_done")
+    for role in ("lead", "reviewer"):
+        r = await client.post(
+            f"/api/projects/{pid}/revise",
+            json={"instruction": "x", "affected_roles": [role]},
+        )
+        assert r.status_code == 400
+
+
+async def test_chat_refiner_returns_revision_request_for_frontend(client, mock_lead_chat):
+    # When status is stage1_done, persona switches to refiner. If the Lead
+    # emits REVISION_REQUEST, the chat response surfaces it for the UI to
+    # show an "Apply" button.
+    create = await client.post("/api/projects", json={"idea": "x"})
+    pid = create.json()["project_id"]
+    await _force_status(pid, "stage1_done")
+
+    mock_lead_chat["reply"] = ChatReply(
+        display_text="Sure thing.",
+        revision_request="add dark mode as a default and propagate to frontend + screens",
+        cost_usd=0.01,
+    )
+    r = await client.post(f"/api/projects/{pid}/chat", json={"content": "go ahead"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["revision_request"]
+    assert "dark mode" in body["revision_request"]

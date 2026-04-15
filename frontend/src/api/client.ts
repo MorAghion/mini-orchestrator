@@ -25,6 +25,7 @@ export interface Wave {
   roles: string[];
   status: "pending" | "running" | "done" | "failed";
   is_rework: boolean;
+  is_revision: boolean;
   started_at: string | null;
   completed_at: string | null;
 }
@@ -136,6 +137,18 @@ export const api = {
       `/api/projects/${id}/launch`,
       idea ? { idea } : {},
     ),
+  reviseProject: (
+    id: string,
+    instruction: string,
+    affectedRoles?: string[],
+  ) =>
+    post<
+      { project_id: string; status: string; affected_roles: string[] },
+      { instruction: string; affected_roles?: string[] }
+    >(`/api/projects/${id}/revise`, {
+      instruction,
+      ...(affectedRoles ? { affected_roles: affectedRoles } : {}),
+    }),
 
   // Artifacts
   getArtifacts: (id: string) =>

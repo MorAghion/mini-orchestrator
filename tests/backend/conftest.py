@@ -43,20 +43,30 @@ async def isolated_db(tmp_path, monkeypatch) -> AsyncIterator[str]:
 
 
 @pytest.fixture(autouse=True)
-def no_real_stage1(monkeypatch):
-    """Safety: never spawn the real wave engine in tests.
+def no_real_engine_calls(monkeypatch):
+    """Safety: never spawn the real wave engine functions in tests.
 
-    Route tests call POST /api/projects/{id}/launch which schedules
-    run_stage1 as a background task. Without this fixture, that task would
-    shell out to the live Claude CLI. We replace it with a no-op.
+    Route tests call POST /api/projects/{id}/launch and /revise which
+    schedule background tasks. Without this fixture those would shell out
+    to the live Claude CLI. We replace each with a recording no-op so
+    tests can both stay safe and assert the engine was invoked correctly.
     """
-    async def _noop(*args, **kwargs):
+    calls: dict[str, list[tuple]] = {"run_stage1": [], "run_revision": []}
+
+    async def _noop_stage1(*args, **kwargs):
+        calls["run_stage1"].append((args, kwargs))
         return None
 
-    # Monkeypatch BOTH the function definition AND the imported name in
-    # routes/projects.py (from backend.engine.wave_engine import run_stage1).
-    monkeypatch.setattr("backend.engine.wave_engine.run_stage1", _noop, raising=False)
-    monkeypatch.setattr("backend.routes.projects.run_stage1", _noop, raising=False)
+    async def _noop_revision(*args, **kwargs):
+        calls["run_revision"].append((args, kwargs))
+        return None
+
+    # Patch the function definitions AND the names re-exported into routes.
+    monkeypatch.setattr("backend.engine.wave_engine.run_stage1", _noop_stage1, raising=False)
+    monkeypatch.setattr("backend.routes.projects.run_stage1", _noop_stage1, raising=False)
+    monkeypatch.setattr("backend.engine.wave_engine.run_revision", _noop_revision, raising=False)
+    monkeypatch.setattr("backend.routes.projects.run_revision", _noop_revision, raising=False)
+    return calls
 
 
 @pytest.fixture

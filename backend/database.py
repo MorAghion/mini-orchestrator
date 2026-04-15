@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS waves (
     number INTEGER NOT NULL,
     roles TEXT NOT NULL,            -- JSON array
     status TEXT NOT NULL,
-    is_rework INTEGER NOT NULL DEFAULT 0,
+    is_rework INTEGER NOT NULL DEFAULT 0,    -- auto-triggered after Reviewer
+    is_revision INTEGER NOT NULL DEFAULT 0,  -- user-requested via /revise
     started_at TEXT,
     completed_at TEXT
 );
@@ -96,6 +97,7 @@ async def init_db() -> None:
         await db.executescript(SCHEMA)
         # Lightweight forward-only migrations for pre-existing DBs.
         await _ensure_column(db, "waves", "is_rework", "INTEGER NOT NULL DEFAULT 0")
+        await _ensure_column(db, "waves", "is_revision", "INTEGER NOT NULL DEFAULT 0")
         await _ensure_column(db, "projects", "cost_cents", "INTEGER NOT NULL DEFAULT 0")
         await _drop_column_if_exists(db, "artifacts", "content")
         await db.commit()
