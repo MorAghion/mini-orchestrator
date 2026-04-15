@@ -60,25 +60,25 @@ architectural details live in [plan.md](plan.md).
 ### 4.1 Conversational Lead + right-panel redesign  🟡 in progress
 
 **Backend (4.1a):**
-- [ ] New project status `shaping` (draft exists before Stage 1 launches)
-- [ ] `lead_messages` table (persistent chat per project)
-- [ ] `notes_queue` table (user-dropped notes awaiting absorption into review)
-- [ ] `LeadAgent.chat()` with three personas:
-    - [ ] Shaper — asks clarifying questions pre-run, maintains draft brief
-    - [ ] Narrator — reports progress during run, queues user notes
-    - [ ] Refiner — accepts revision requests post-run, triggers targeted rework
-- [ ] `POST /api/projects/{id}/chat` — streamed response (SSE)
-- [ ] `POST /api/projects/{id}/launch` — transition `shaping → planning`
-- [ ] `POST /api/projects/{id}/notes` + `DELETE /.../notes/{note_id}`
-- [ ] Accumulate `total_cost_usd` from CLI envelope into a `projects` column
+- [x] New project status `shaping` (draft exists before Stage 1 launches)
+- [x] `lead_messages` table (persistent chat per project)
+- [x] `notes_queue` table (user-dropped notes awaiting absorption into review)
+- [x] `LeadAgent.chat()` with three personas:
+    - [x] Shaper — asks clarifying questions pre-run, maintains draft brief
+    - [x] Narrator — reports progress during run, queues user notes
+    - [x] Refiner — accepts revision requests post-run, triggers targeted rework
+- [x] `POST /api/projects/{id}/chat` — non-streaming for now (returns JSON once Lead finishes); streaming deferred
+- [x] `POST /api/projects/{id}/launch` — transition `shaping → planning`
+- [x] `POST /api/projects/{id}/notes` + `DELETE /.../notes/{note_id}` + `GET /.../notes`
+- [x] Accumulate `total_cost_usd` from CLI envelope into `projects.cost_cents`
 
 **Frontend (4.1b):**
-- [ ] Home screen: "Start new chat with Lead" (primary) + "I have a brief already" (secondary quick path)
-- [ ] `Chat` component — message list + composer + typing/streaming indicator
-- [ ] `PendingNotes` strip — chips, click-to-drop, auto-clears when absorbed
-- [ ] Right panel re-layout: Chat (top, always-on) · PendingNotes · Review · Activity (collapsed)
-- [ ] "Launch Stage 1" affordance surfaces when Lead proposes a brief
-- [ ] Cost indicator in activity/header ("$0.42 equivalent — free under Max")
+- [x] Home screen: "+ Start new project" creates a shaping project and jumps into chat
+- [x] `Chat` component — message list + composer + animated typing indicator + markdown rendering for Lead bubbles
+- [x] `PendingNotes` strip — chips with click-to-drop, hidden when empty
+- [x] Right panel re-layout: Chat (top) · PendingNotes · Review · Activity (collapsed)
+- [x] "Launch Stage 1 →" CTA surfaces above the composer when the Lead has set the brief
+- [x] Cost indicator in header ("$0.09 equiv · free under Max")
 
 **Post-run + polish (4.1c):**
 - [ ] Revision requests trigger a targeted rework wave (distinct label from reviewer-rework)
@@ -126,6 +126,13 @@ architectural details live in [plan.md](plan.md).
 
 - [ ] README with architecture diagram, screenshots, demo GIF
 - [ ] Error handling hardening (CLI retry, context budget, graceful degradation)
+- [ ] **Humanize the Lead's chat voice** — currently reads too robotic
+      (bullet-heavy replies, overly structured clarifying questions,
+      "proposed brief" formal headers). Rewrite the three chat prompts
+      (shaper/narrator/refiner) to feel like a thinking partner:
+      looser prose, variable reply length, sparing use of bullets,
+      warmer tone. Consider also whether the shaper's opener should be
+      an open question instead of a two-question interview.
 - [ ] Demo recording
 - [ ] Blog post (ai-from-scratch chapter 19)
 - [ ] GitHub polish (description, topics, social preview image)

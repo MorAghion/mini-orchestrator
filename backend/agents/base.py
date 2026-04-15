@@ -87,6 +87,25 @@ class BaseAgent:
         envelope = await self._run(self._base_cmd(user_message))
         return str(envelope.get("result", "")).strip()
 
+    async def complete_with_usage(
+        self, user_message: str, system_override: str | None = None
+    ) -> tuple[str, float]:
+        """Same as complete() but also returns the CLI's reported cost_usd.
+
+        `system_override` — if given, replaces the agent's system prompt for
+        this one call. Used by chat-capable agents to switch personas
+        without constructing a new instance.
+        """
+        cmd = self._base_cmd(user_message)
+        if system_override is not None:
+            # --system-prompt value sits right after the flag in _base_cmd
+            i = cmd.index("--system-prompt") + 1
+            cmd[i] = system_override
+        envelope = await self._run(cmd)
+        text = str(envelope.get("result", "")).strip()
+        cost = float(envelope.get("total_cost_usd") or 0.0)
+        return text, cost
+
     async def structured(
         self,
         user_message: str,
