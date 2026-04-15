@@ -1,0 +1,47 @@
+# Python project config. We don't ship a package — this file is purely for
+# dev tooling (pytest + ruff). `requirements.txt` / `requirements-dev.txt`
+# still drive installs.
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-q",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*",
+    # TODO: replace datetime.utcnow() with datetime.now(UTC) everywhere
+    # (tracked under cross-cutting work in docs/TODO.md). Silence until then.
+    "ignore:datetime.datetime.utcnow.*:DeprecationWarning",
+]
+# We have `tests/run_smoke.py` and `tests/smoke_runs/...` — exclude them.
+# The smoke runner is a diagnostic script, not a test module.
+norecursedirs = ["smoke_runs"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# scope: only the Python we author
+include = ["backend/**/*.py", "tests/**/*.py"]
+exclude = ["venv", "tests/smoke_runs", "backend/output"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear — common pitfalls
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line too long — let formatter handle it; don't block on literal strings
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E402"]  # test files often need path setup before imports

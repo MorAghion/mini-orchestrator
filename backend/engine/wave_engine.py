@@ -20,7 +20,7 @@ from backend.agents.lead import LeadAgent
 from backend.agents.reviewer import ReviewerAgent
 from backend.agents.worker import DocWorkerAgent
 from backend.config import DB_PATH, MAX_CONCURRENT_AGENTS
-from backend.engine.artifact_store import load_artifacts, save_artifact, save_review_report
+from backend.engine.artifact_store import save_artifact, save_review_report
 from backend.engine.event_bus import EventBus
 from backend.models.events import Event, EventType
 from backend.models.project import (

@@ -143,7 +143,9 @@ architectural details live in [plan.md](plan.md).
 
 - [ ] Terminal chat wrapper (`python -m backend.chat <project-id>`) — same DB, power-user surface
 - [ ] API-key-only fallback path (for users without a Claude subscription; pay-as-you-go)
-- [ ] Unit tests for deterministic pieces (DAG planner, event bus fan-out, artifact store round-trips)
+- [x] **Testing infrastructure** — pytest/pytest-asyncio/httpx backend, vitest/RTL/jsdom frontend, ruff + py_compile in pre-commit, GitHub Actions CI (backend + frontend + precommit hygiene). 47 tests passing.
+- [ ] Wave engine coverage — currently only exercised end-to-end via smoke runner. Mock `DocWorkerAgent` / `ReviewerAgent`, assert rework-role routing, parallel/sequential wave execution, semaphore gating.
+- [ ] Replace `datetime.utcnow()` everywhere with `datetime.now(UTC)` (deprecation warnings suppressed in pytest config until then).
 - [ ] Structured logging + event-trace observability
 - [ ] Auto-approve rules in `.claude/settings.local.json` for safe read-only commands
 
@@ -154,3 +156,11 @@ architectural details live in [plan.md](plan.md).
 - Check a box (`- [ ]` → `- [x]`) the moment a task lands on `master`.
 - New ideas: append under the right phase. If it's a big one, bump it to its own subsection.
 - Commit TODO changes together with the code they reference, so the diff tells the story.
+
+
+---
+
+## Open question that pops - DO NOT DELETE:
+1. can we add a feature that takes under consideration the user's subscription + project scope in order to determine the max number of agents working simultanuesly? this action could take place in the "bridge" part
+
+2. which of the docs generated is responsible of the user's app-level architecture. for example, if the user has several screens in which they have an "edit mode" - the app can have 1 single edit mode component used by every screen. Where do we define these kinds of structures?

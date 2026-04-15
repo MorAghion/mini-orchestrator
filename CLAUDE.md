@@ -122,8 +122,32 @@ The hook is a 3-line shim at `.git/hooks/pre-commit` that delegates to `scripts/
 
 ## Testing
 
-- **End-to-end smoke**: `./venv/bin/python -m tests.run_smoke [optional idea]` — spins Stage 1 against a short project idea and writes to `tests/smoke_runs/<project-id>/`. Diagnostic, no assertions; inspect the output by hand.
-- **No unit tests yet.** Stage 1 output is non-deterministic (live CLI calls), so assertions on content are brittle. Phase 5 will add unit tests for the deterministic pieces (DAG planner, dependency-cycle detection, artifact store round-trips, event-bus fan-out).
+Every phase now lands with tests for the deterministic pieces. Non-deterministic CLI output is still exercised by the end-to-end smoke runner, but logic that CAN be pinned down IS pinned down.
+
+**Backend — pytest + pytest-asyncio + httpx TestClient:**
+- `tests/backend/conftest.py` provides shared fixtures:
+  - `isolated_db` — each test gets a fresh SQLite file, all modules' `DB_PATH` monkeypatched, schema initialized
+  - `mock_lead_chat` — replaces `LeadAgent.chat()` so route tests don't hit the live CLI; captures calls for assertions
+  - `no_real_stage1` (autouse) — replaces `run_stage1` with a no-op so `/launch` never spawns actual agents
+- Suites: `test_parse_reply.py` (marker parser), `test_chat_store.py` (message + note round-trips), `test_event_bus.py` (pub/sub fan-out), `test_routes.py` (HTTP-level project/chat/notes).
+- Run: `./venv/bin/pytest tests/backend -v`
+
+**Frontend — vitest + React Testing Library + jsdom:**
+- Component tests live next to the code as `*.test.tsx`
+- `src/test/setup.ts` loads `@testing-library/jest-dom` matchers and cleans up the DOM after each test
+- Mock the API client with `vi.mock("../api/client", ...)` so hook tests never touch `fetch`
+- Run: `cd frontend && npm test`
+
+**Pre-commit (`scripts/precommit.sh`):**
+- `py_compile` + `ruff check` on staged Python
+- `tsc --noEmit` on staged frontend TS
+
+**CI (`.github/workflows/ci.yml`):**
+- Three jobs on push/PR to main or master: backend (ruff + pytest w/ coverage), frontend (tsc + vitest + production build), pre-commit hygiene (runs `scripts/precommit.sh` against the commit's diff).
+
+**End-to-end smoke runner**: `./venv/bin/python -m tests.run_smoke [optional idea]` — spins real Stage 1 and writes to `tests/smoke_runs/<project-id>/`. Diagnostic, no assertions, consumes subscription quota — run sparingly.
+
+**Testing discipline for new work:** every feature branch ships with tests for its deterministic pieces (parsers, DB round-trips, endpoints with mocked agents, components). Non-deterministic output (live CLI replies, generated docs, reviewer verdicts) is not unit-tested — the smoke runner exercises those and we accept visual inspection as the bar.
 
 ## Skills
 

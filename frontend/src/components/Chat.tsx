@@ -30,11 +30,12 @@ export function Chat({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll to bottom when new messages land.
+  // jsdom (used in vitest) doesn't implement Element.scrollTo, so guard it.
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    const el = scrollRef.current;
+    if (el && typeof el.scrollTo === "function") {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
   }, [messages.length, sending]);
 
   const handleSubmit = (e: React.FormEvent) => {

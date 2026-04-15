@@ -15,9 +15,8 @@ The chat persona is chosen based on project status:
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Response, status
@@ -37,7 +36,6 @@ from backend.models.project import (
     NoteStatus,
     ProjectStatus,
 )
-
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["chat"])
 
@@ -99,8 +97,8 @@ class ChatResponse(BaseModel):
     lead_message_id: int
     display_text: str
     brief_ready: bool = False
-    note_queued: Optional[str] = None
-    revision_request: Optional[str] = None
+    note_queued: str | None = None
+    revision_request: str | None = None
     cost_usd: float = 0.0
 
 

@@ -4,7 +4,6 @@ import aiosqlite
 
 from backend.config import DB_PATH
 
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,

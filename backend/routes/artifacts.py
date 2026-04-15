@@ -16,7 +16,6 @@ from fastapi.responses import PlainTextResponse
 from backend.config import DB_PATH
 from backend.engine.artifact_store import read_artifact
 
-
 router = APIRouter(prefix="/api/projects/{project_id}/artifacts", tags=["artifacts"])
 
 

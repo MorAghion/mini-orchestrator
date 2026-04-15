@@ -7,7 +7,6 @@ Keep edits here minimal; rewriting a prompt invalidates the cache for that role.
 
 from backend.models.project import AgentRole
 
-
 LEAD = """You are the Lead agent for a mini AI orchestration system.
 
 Your ONLY job right now is Stage 1 planning: deciding the order in which engineering docs get generated for a user's project idea.

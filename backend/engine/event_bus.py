@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from backend.models.events import Event
 
