@@ -96,9 +96,9 @@ function WaveRow({
           <div className="wave-title-row">
             <span className="number">
               {wave.is_revision
-                ? "Revision round"
+                ? "User revision wave"
                 : wave.is_rework
-                  ? "Rework round"
+                  ? "Rework wave"
                   : `Wave ${wave.number}`}
             </span>
             {wave.is_revision && (
@@ -113,12 +113,13 @@ function WaveRow({
           </div>
           {wave.is_revision ? (
             <div className="wave-subtitle">
-              You requested a change — these agents re-ran with your instruction
-              and the Reviewer re-checked.
+              You requested a change — these agents re-ran with your
+              instruction and the Reviewer agent re-checked.
             </div>
           ) : wave.is_rework ? (
             <div className="wave-subtitle">
-              Reviewer flagged issues — these agents re-ran to address feedback.
+              Reviewer agent marked issues — these agents re-ran to address
+              the feedback.
             </div>
           ) : null}
         </div>
