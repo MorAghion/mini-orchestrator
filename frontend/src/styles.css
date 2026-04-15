@@ -363,35 +363,38 @@ button {
   border-radius: 10px;
 }
 
-/* Auto-rework (Reviewer-driven) — gold, matches the running/glow palette */
+/* Auto-rework (Reviewer-driven) — light purple, matches --review */
 .rework-badge {
-  background: rgba(212, 175, 55, 0.15);
-  color: var(--gold-active);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-}
-
-/* User-requested revision — purple, matches the review/refiner palette */
-.revision-badge {
   background: rgba(168, 152, 196, 0.18);
   color: var(--review);
   border: 1px solid rgba(168, 152, 196, 0.40);
 }
 
-/* Wave container accent: revision waves carry a purple top border so they
- * stand out at a glance amid the gold rework / neutral original waves. */
-.wave.wave-revision {
+/* User-requested revision — darker purple, matches --architecture */
+.revision-badge {
+  background: rgba(138, 128, 184, 0.22);
+  color: var(--architecture);
+  border: 1px solid rgba(138, 128, 184, 0.45);
+}
+
+/* Wave container accents — both purples, distinguished by depth.
+ * Rework: light purple. Revision: darker purple. */
+.wave.wave-rework:not(.wave-revision) {
   border-top: 1.5px solid var(--review);
   box-shadow: 0 4px 16px rgba(168, 152, 196, 0.10);
 }
 
-.wave.wave-revision .wave-header {
+.wave.wave-rework:not(.wave-revision) .wave-header {
   background: rgba(168, 152, 196, 0.06);
 }
 
-/* Rework waves keep the gold accent (originally on .wave.running, but
- * rework waves are also "running" while in flight, so we double up) */
-.wave.wave-rework:not(.wave-revision) {
-  border-top: 1.5px solid var(--gold-active);
+.wave.wave-revision {
+  border-top: 1.5px solid var(--architecture);
+  box-shadow: 0 4px 16px rgba(138, 128, 184, 0.14);
+}
+
+.wave.wave-revision .wave-header {
+  background: rgba(138, 128, 184, 0.08);
 }
 
 .wave-header .number {
