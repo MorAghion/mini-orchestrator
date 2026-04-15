@@ -121,6 +121,7 @@ done
 ALLOWED_TOP=(
     backend frontend docs tests scripts venv node_modules data
     CLAUDE.md README.md README LICENSE LICENSE.md
+    pyproject.toml
     .env.example .gitignore .gitattributes
     .git .github .vscode .idea
 )
