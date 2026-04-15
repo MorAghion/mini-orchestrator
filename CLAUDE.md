@@ -17,21 +17,60 @@ A mini AI orchestration system that takes a project idea and builds the entire p
 ## Project Structure
 
 ```
-backend/          Python FastAPI backend
-  agents/         Agent classes + system prompts
-  engine/         Wave engine, artifact store, CLI manager
-  models/         Pydantic models
-  routes/         API endpoints + SSE
-frontend/         React board UI
-  src/components/ Board, TaskCard, LeadChat, etc.
-tasks/            JSON task files (runtime, gitignored)
-data/             SQLite DB (runtime, gitignored)
-docs/design/      HTML UI mockups (design reference)
+backend/              Python/FastAPI orchestrator
+  agents/
+    base.py           shared Claude-CLI subprocess loop
+    lead.py           Lead: plans waves (tool call)
+    worker.py         DocWorkerAgent: one per doc role
+    reviewer.py       cross-doc consistency check (structured output)
+    prompts/stage1.py system prompts for all 10 roles
+  engine/
+    wave_engine.py    sequential waves + parallel within + rework cycle
+    event_bus.py      in-memory asyncio pub/sub for SSE
+    artifact_store.py disk writer + SQLite index
+  models/
+    project.py        Pydantic: Project, Wave, DocTask, Artifact, ReviewReport
+    events.py         SSE event type strings + Event wrapper
+  routes/
+    projects.py       POST/GET project + review
+    artifacts.py      list metadata + read content from disk
+    events.py         SSE stream per project
+  main.py             FastAPI app + lifespan hook (init_db, bus)
+  config.py           env-loaded settings
+  database.py         SQLite schema + forward-only migrations
+  run_stage1.py       CLI entry point
+  output/             real-run artifacts (gitignored)
+
+frontend/             React + TypeScript + Vite
+  src/
+    api/client.ts     typed REST wrapper
+    components/       Board, ProjectForm, ActivityPanel, ReviewPanel,
+                      ArtifactViewer, StageTabs
+    hooks/            useTheme, useProject, useEventStream
+    labels.ts         user-facing strings (roles, statuses, phases)
+    App.tsx, main.tsx, styles.css
+  index.html, package.json, tsconfig.json, vite.config.ts
+
+docs/
+  plan.md             full system plan — source of truth for architecture
+  design/             HTML mockups (metallic palette reference)
+
+tests/
+  run_smoke.py        end-to-end smoke runner
+  smoke_runs/         per-run outputs (contents gitignored)
+
+scripts/
+  precommit.sh        pre-commit hygiene check (wired via .git/hooks/pre-commit)
+
+data/                 SQLite DB (gitignored, created at runtime)
 ```
+
+Anything new at the top level requires updating `ALLOWED_TOP` in `scripts/precommit.sh` — the hook warns on unknown entries.
 
 ## Key Architecture Decisions
 
 - **Blackboard pattern**: Agents never communicate directly. All state flows through JSON files + SQLite.
+- **Disk is the source of truth, SQLite is an index.** Generated artifacts (markdown docs, review reports, Stage 2 task/handoff JSONs) live on disk under `<output_dir>/<project_id>/`. SQLite (`data/orchestrator.db`) holds metadata-only rows so the UI can cheaply list + filter. **Never store content bodies in SQLite** — only ids, foreign keys, filenames, status flags, timestamps.
 - **Claude CLI for every agent**: Every Lead/doc/reviewer/coder call shells out to `claude -p` with `--system-prompt`, `--model`, `--tools ""` (disabled), and `--output-format json`. Structured outputs use `--json-schema`. This lets the orchestrator run entirely on the user's Max subscription.
 - **Lead agent**: never codes. Coordinates, plans sprints, manages handoffs, merges branches. Still a dedicated role — just executed via the CLI like everyone else.
 - **Coding agents**: Claude Code CLI sessions, one branch per agent.
@@ -62,3 +101,38 @@ feature/<task>  →  master (integration)  →  main (stable, public)
 - The Lead agent is the sole merger for generated projects. Coding agents never merge.
 
 The Config Generator (Bridge step) must propagate this rule into every generated project's `CLAUDE.md` **and** into each per-role agent instruction file, so coding agents see it in their immediate context and don't accidentally branch off or merge into `main`.
+
+## Pre-commit hygiene
+
+Every commit runs `scripts/precommit.sh` via `.git/hooks/pre-commit`. The hook **blocks** commits that include:
+
+- Junk files (`.DS_Store`, `*.pyc`, `__pycache__/`, `*.log`, `*.tmp`, `*.swp`, `*.bak`, `~`-suffixed backups, `.env` and its variants except `.env.example`)
+- Likely secrets (`sk-ant-*`, `ghp_*`, `gho_*`, `github_pat_*`, AWS access keys, `aws_secret_access_key` lines, PEM private keys)
+- Files that match `.gitignore` but were force-added
+- Staged `.py` files that fail `python -m py_compile`
+- Staged `.ts`/`.tsx` under `frontend/src/` if `tsc --noEmit` fails
+
+And **warns** (non-blocking) on:
+
+- Unknown top-level entries (update `ALLOWED_TOP` in the script if intentional)
+- `backend/` changes without a touch to `CLAUDE.md` or `docs/plan.md` — soft nudge to keep docs fresh
+
+The hook is a 3-line shim at `.git/hooks/pre-commit` that delegates to `scripts/precommit.sh` — the script is the source of truth, edit it there. Bypass once with `git commit --no-verify` only when there's a real reason, and explain the reason in the commit message.
+
+## Testing
+
+- **End-to-end smoke**: `./venv/bin/python -m tests.run_smoke [optional idea]` — spins Stage 1 against a short project idea and writes to `tests/smoke_runs/<project-id>/`. Diagnostic, no assertions; inspect the output by hand.
+- **No unit tests yet.** Stage 1 output is non-deterministic (live CLI calls), so assertions on content are brittle. Phase 5 will add unit tests for the deterministic pieces (DAG planner, dependency-cycle detection, artifact store round-trips, event-bus fan-out).
+
+## Skills
+
+Available Claude Code skills to use when appropriate:
+
+- **`claude-api`** — when building code that calls the Anthropic SDK directly. (We used it briefly for Phase 2 before pivoting to the CLI; rarely needed now.)
+- **`simplify`** — invoke after any non-trivial code change to review for reuse, quality, efficiency. Default on for multi-file PRs.
+- **`update-config`** — for changes to `.claude/settings.json` / `settings.local.json` (hooks, auto-approve permissions, env vars).
+- **`loop`** — for polling or recurring tasks during development (e.g., tail a log for errors).
+- **`schedule`** — for scheduled remote agents.
+- **`keybindings-help`** — for keyboard shortcut customization.
+
+Default to using `simplify` when the current change touches more than one file; skip on pure doc edits.
