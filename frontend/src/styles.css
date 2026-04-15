@@ -144,14 +144,22 @@ button {
   cursor: pointer;
 }
 
-/* -------- layout -------- */
+/* -------- layout --------
+ * Fixed-viewport shell: the app fills the viewport, the header is
+ * fixed-size, and main fills the rest. Each column scrolls internally
+ * so the chat composer stays visible while messages scroll, the
+ * timeline scrolls within its panel, and the board scrolls if waves
+ * exceed the column height.
+ */
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -174,7 +182,7 @@ button {
 }
 
 .app-main {
-  flex: 1;
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: minmax(640px, 1fr) 340px;
   gap: 16px;
@@ -182,12 +190,16 @@ button {
   max-width: 1440px;
   margin: 0 auto;
   width: 100%;
+  min-height: 0;       /* essential for nested overflow to clip */
+  overflow: hidden;
 }
 
 .main-column {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;     /* board scrolls within its column */
 }
 
 @media (max-width: 980px) {
@@ -348,6 +360,21 @@ button {
   color: var(--text-secondary);
   margin-top: 3px;
   font-style: italic;
+  line-height: 1.45;
+}
+
+.wave-instruction-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--architecture);
+  font-style: normal;
+}
+
+.wave-instruction {
+  color: var(--text-primary);
+  font-style: normal;
 }
 
 .rework-badge,
@@ -562,12 +589,13 @@ button {
   }
 }
 
-/* -------- right panel (chat + pending notes + review + activity) -------- */
+/* -------- right panel (chat + pending notes + timeline) -------- */
 .side-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .panel {
@@ -600,7 +628,11 @@ button {
   color: var(--text-muted);
 }
 
-/* -------- Chat -------- */
+/* -------- Chat --------
+ * Chat takes roughly half the side-panel; messages scroll within it so
+ * the composer stays anchored at the bottom. Pending notes (small) and
+ * the timeline (other half) share the remaining space.
+ */
 .chat {
   background: var(--bg-sprint-row);
   border: 1px solid var(--border);
@@ -608,8 +640,8 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 420px;
-  flex: 1 1 auto;
+  flex: 1 1 50%;
+  min-height: 280px;
 }
 
 .chat-header {
@@ -893,11 +925,30 @@ button {
   font-style: italic;
 }
 
+.pending-notes-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.pending-notes-empty em {
+  color: var(--text-secondary);
+  font-style: normal;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+}
+
+.pending-notes {
+  flex: 0 0 auto;     /* fixed-size; doesn't take chat/timeline's space */
+}
+
 /* -------- Timeline (unified activity + reviewer notes) -------- */
 .timeline-panel {
   display: flex;
   flex-direction: column;
+  flex: 1 1 50%;
   min-height: 200px;
+  overflow: hidden;
 }
 
 .timeline-header {
@@ -936,7 +987,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 480px;
+  flex: 1 1 auto;
+  min-height: 0;          /* allow flex item to shrink under content size */
   overflow-y: auto;
 }
 

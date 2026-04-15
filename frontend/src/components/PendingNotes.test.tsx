@@ -15,9 +15,12 @@ function note(overrides: Partial<Note> = {}): Note {
 }
 
 describe("PendingNotes", () => {
-  it("renders nothing when the list is empty", () => {
-    const { container } = render(<PendingNotes notes={[]} onDrop={() => {}} />);
-    expect(container).toBeEmptyDOMElement();
+  it("renders an explanatory empty state when the list is empty", () => {
+    render(<PendingNotes notes={[]} onDrop={() => {}} />);
+    expect(screen.getByText(/Pending notes/)).toBeInTheDocument();
+    expect(screen.getByText(/Drop a note in chat/)).toBeInTheDocument();
+    // Count badge still renders, showing 0
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 
   it("renders one chip per note and shows the count", () => {
