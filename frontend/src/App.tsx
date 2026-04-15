@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { api, DocTask, ProjectStatus, ProjectSummary } from "./api/client";
-import { ActivityPanel } from "./components/ActivityPanel";
 import { ArtifactViewer } from "./components/ArtifactViewer";
 import { Board } from "./components/Board";
 import { Chat } from "./components/Chat";
 import { PendingNotes } from "./components/PendingNotes";
-import { ReviewPanel } from "./components/ReviewPanel";
 import { Stage, StageTabs } from "./components/StageTabs";
+import { Timeline } from "./components/Timeline";
 import { useChat } from "./hooks/useChat";
 import { useEventStream } from "./hooks/useEventStream";
 import { useNotes } from "./hooks/useNotes";
@@ -137,9 +136,13 @@ export function App() {
           />
           <PendingNotes notes={notes} onDrop={dropNote} />
           {status !== "shaping" && (
-            <ReviewPanel projectId={projectId} tick={events.length} />
+            <Timeline
+              projectId={projectId}
+              events={events}
+              connected={connected}
+              reviewTick={events.length}
+            />
           )}
-          <ActivityPanel events={events} connected={connected} />
         </div>
       </div>
 

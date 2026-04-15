@@ -893,6 +893,197 @@ button {
   font-style: italic;
 }
 
+/* -------- Timeline (unified activity + reviewer notes) -------- */
+.timeline-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.timeline-header h3 {
+  margin: 0;
+}
+
+.timeline-conn {
+  font-size: 10px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.timeline-direction {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.timeline-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 12px 4px;
+  font-style: italic;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.tl-row {
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tl-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.tl-row-main {
+  display: grid;
+  grid-template-columns: 18px 38px 1fr 14px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tl-row-main:disabled {
+  cursor: default;
+}
+
+.tl-row-main:disabled .tl-chev {
+  visibility: hidden;
+}
+
+.tl-icon {
+  font-size: 13px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.tl-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.tl-text {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-chev {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* category accents — left border, very subtle */
+.tl-row {
+  border-left: 2px solid transparent;
+  padding-left: 2px;
+}
+.tl-project { border-left-color: var(--gold-active); }
+.tl-wave    { border-left-color: var(--backend); }
+.tl-task    { border-left-color: var(--frontend); }
+.tl-review  { border-left-color: var(--review); }
+.tl-rework  { border-left-color: var(--review); }
+.tl-revision { border-left-color: var(--architecture); }
+.tl-error   { border-left-color: var(--security); }
+.tl-error .tl-text { color: var(--security); }
+
+/* expanded review detail */
+.tl-detail {
+  padding: 6px 28px 12px;
+  border-left: 2px solid var(--review);
+  margin-left: 2px;
+}
+
+.tl-review-summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.tl-issues {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tl-issue {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tl-issue-sev,
+.tl-issue-cat {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-right: 6px;
+}
+.tl-issue-sev { color: var(--text-muted); }
+.tl-issue-cat { color: var(--text-secondary); }
+
+.tl-issue-high { border-left: 2px solid var(--security); }
+.tl-issue-high .tl-issue-sev { color: var(--security); }
+.tl-issue-medium { border-left: 2px solid var(--gold-active); }
+.tl-issue-medium .tl-issue-sev { color: var(--gold-active); }
+.tl-issue-low { border-left: 2px solid var(--text-muted); }
+
+.tl-issue-body {
+  margin-top: 3px;
+  color: var(--text-primary);
+}
+
+.tl-issue-fix {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+}
+.tl-issue-fix strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.tl-issue-affected {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* -------- cost indicator -------- */
 .cost-indicator {
   display: inline-flex;
