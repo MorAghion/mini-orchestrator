@@ -24,6 +24,21 @@ warn() { echo "${YELLOW}⚠${RESET} $*"; warnings=$((warnings+1)); }
 ok()   { echo "${GREEN}✓${RESET} $*"; }
 info() { echo "${DIM}·${RESET} $*"; }
 
+# --- branch guard: never commit directly to main ----------------------------
+# Per CLAUDE.md the workflow is feature → master → main. main only ever
+# receives merge commits. This catches accidental forgetting (mine or yours).
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "(detached)")
+if [ "$current_branch" = "main" ]; then
+    # Allow when in the middle of a merge (the master → main promotion).
+    if [ ! -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+        echo "${RED}✗${RESET} you are on 'main' — direct commits to main are not allowed."
+        echo "    Per CLAUDE.md: feature → master → main."
+        echo "    Switch with:    git stash && git checkout master && git stash pop"
+        echo "    Or, if intentional, bypass with --no-verify and document why."
+        exit 1
+    fi
+fi
+
 # --- staged files (added / copied / modified / renamed; not deletions) ---
 # Portable substitute for `mapfile` — macOS's /bin/bash is 3.2.
 STAGED=()
