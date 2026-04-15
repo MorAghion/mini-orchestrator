@@ -138,6 +138,12 @@ architectural details live in [plan.md](plan.md).
       looser prose, variable reply length, sparing use of bullets,
       warmer tone. Consider also whether the shaper's opener should be
       an open question instead of a two-question interview.
+- [ ] **Auto-expand any wave with a card in progress.** Today the wave's
+      `expanded` state is set once on first render based on whether any
+      task is running; if the user collapses an active wave, it stays
+      collapsed even when later tasks land. Make a wave with at least one
+      `running` task always render expanded, regardless of prior toggle —
+      user can still collapse `done` waves freely.
 - [ ] Demo recording
 - [ ] Blog post (ai-from-scratch chapter 19)
 - [ ] GitHub polish (description, topics, social preview image)
