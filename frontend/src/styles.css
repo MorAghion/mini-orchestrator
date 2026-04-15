@@ -844,9 +844,20 @@ button {
   font-weight: 500;
 }
 
+.cost-indicator .cost-you-pay {
+  font-variant-numeric: tabular-nums;
+  color: var(--backend);      /* green-ish teal to signal "no charge" */
+  font-weight: 600;
+}
+
 .cost-indicator .cost-caption {
   color: var(--text-muted);
   font-size: 10px;
+}
+
+.cost-indicator .cost-equiv {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .panel h3 {

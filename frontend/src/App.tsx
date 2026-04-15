@@ -189,10 +189,16 @@ function CostIndicator({ cents }: { cents: number }) {
   return (
     <div
       className="cost-indicator"
-      title="Equivalent API cost across this project's CLI calls — $0 under Claude Max"
+      title={
+        `You paid: $0 (Claude Max is a flat subscription). ` +
+        `This project would cost ~$${dollars} if billed via the Anthropic API instead. ` +
+        `We show the API-equivalent so you can gauge how much quota the run burned.`
+      }
     >
-      <span className="cost-amount">${dollars}</span>
-      <span className="cost-caption">equiv · free under Max</span>
+      <span className="cost-you-pay">$0</span>
+      <span className="cost-caption">
+        paid · <span className="cost-equiv">~${dollars} API equiv</span>
+      </span>
     </div>
   );
 }
@@ -280,8 +286,12 @@ function ProjectList({
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
                 {phaseLabelFor(p.status)} ·{" "}
                 {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
-                ${(p.cost_cents / 100).toFixed(2)} equiv ·{" "}
-                {new Date(p.updated_at).toLocaleString()}
+                <span
+                  title={`You paid $0 under Max. Equivalent API cost: ~$${(p.cost_cents / 100).toFixed(2)}`}
+                >
+                  $0 paid
+                </span>{" "}
+                · {new Date(p.updated_at).toLocaleString()}
               </div>
             </button>
           );

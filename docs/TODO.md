@@ -126,6 +126,13 @@ architectural details live in [plan.md](plan.md).
 
 - [ ] README with architecture diagram, screenshots, demo GIF
 - [ ] Error handling hardening (CLI retry, context budget, graceful degradation)
+- [ ] **Humanize the Lead's chat voice** — currently reads too robotic
+      (bullet-heavy replies, overly structured clarifying questions,
+      "proposed brief" formal headers). Rewrite the three chat prompts
+      (shaper/narrator/refiner) to feel like a thinking partner:
+      looser prose, variable reply length, sparing use of bullets,
+      warmer tone. Consider also whether the shaper's opener should be
+      an open question instead of a two-question interview.
 - [ ] Demo recording
 - [ ] Blog post (ai-from-scratch chapter 19)
 - [ ] GitHub polish (description, topics, social preview image)
