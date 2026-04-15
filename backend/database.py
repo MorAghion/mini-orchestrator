@@ -8,12 +8,35 @@ from backend.config import DB_PATH
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
-    idea TEXT NOT NULL,
-    status TEXT NOT NULL,
+    idea TEXT NOT NULL,              -- starts empty in 'shaping'; filled by chat
+    status TEXT NOT NULL,            -- shaping | planning | stage1_* | failed
     output_dir TEXT NOT NULL,
+    cost_cents INTEGER NOT NULL DEFAULT 0,  -- accumulated usage (CLI's total_cost_usd * 100, rounded)
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+-- Persistent Lead chat, one row per message. Ordered by created_at.
+CREATE TABLE IF NOT EXISTS lead_messages (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id   TEXT NOT NULL REFERENCES projects(id),
+    role         TEXT NOT NULL,      -- user | lead
+    content      TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_lead_messages_project ON lead_messages(project_id, created_at);
+
+-- User-dropped notes that the Reviewer should absorb at review time.
+CREATE TABLE IF NOT EXISTS notes_queue (
+    id            TEXT PRIMARY KEY,       -- note-<hex>
+    project_id    TEXT NOT NULL REFERENCES projects(id),
+    content       TEXT NOT NULL,          -- the user's note, verbatim
+    source_msg_id INTEGER REFERENCES lead_messages(id),  -- chat message that produced it
+    status        TEXT NOT NULL DEFAULT 'pending',       -- pending | absorbed | dropped
+    absorbed_at   TEXT,
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notes_project_status ON notes_queue(project_id, status);
 
 CREATE TABLE IF NOT EXISTS waves (
     id TEXT PRIMARY KEY,
@@ -74,6 +97,7 @@ async def init_db() -> None:
         await db.executescript(SCHEMA)
         # Lightweight forward-only migrations for pre-existing DBs.
         await _ensure_column(db, "waves", "is_rework", "INTEGER NOT NULL DEFAULT 0")
+        await _ensure_column(db, "projects", "cost_cents", "INTEGER NOT NULL DEFAULT 0")
         await _drop_column_if_exists(db, "artifacts", "content")
         await db.commit()
 

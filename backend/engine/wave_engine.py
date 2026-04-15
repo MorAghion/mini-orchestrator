@@ -171,16 +171,36 @@ async def _run_worker(
     return role, content, None
 
 
-async def run_stage1(idea: str, bus: EventBus | None = None) -> Stage1Result:
-    """End-to-end Stage 1 pipeline: plan → run waves → review → (optional rework)."""
-    project = Project(
-        id=f"proj-{uuid.uuid4().hex[:12]}",
-        idea=idea,
-        status=ProjectStatus.PLANNING,
-        output_dir=f"backend/output/{uuid.uuid4().hex[:12]}",
-    )
-    await _upsert_project(project)
-    await _emit(bus, project.id, "project:created", idea=idea, project_id=project.id)
+async def run_stage1(
+    idea: str,
+    bus: EventBus | None = None,
+    existing_project_id: str | None = None,
+) -> Stage1Result:
+    """End-to-end Stage 1 pipeline: plan → run waves → review → (optional rework).
+
+    If `existing_project_id` is given, the row already exists in `projects`
+    (created during the shaping phase). We update it in place and skip the
+    project:created emit (subscribers of that id are already connected).
+    If None, a fresh project row is created and emitted — used by the CLI
+    runner and the old "create + launch" path.
+    """
+    if existing_project_id:
+        project = Project(
+            id=existing_project_id,
+            idea=idea,
+            status=ProjectStatus.PLANNING,
+            output_dir=f"backend/output/{existing_project_id}",
+        )
+        await _upsert_project(project)
+    else:
+        project = Project(
+            id=f"proj-{uuid.uuid4().hex[:12]}",
+            idea=idea,
+            status=ProjectStatus.PLANNING,
+            output_dir=f"backend/output/{uuid.uuid4().hex[:12]}",
+        )
+        await _upsert_project(project)
+        await _emit(bus, project.id, "project:created", idea=idea, project_id=project.id)
 
     try:
         lead = LeadAgent()

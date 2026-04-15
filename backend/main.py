@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database import init_db
 from backend.engine.event_bus import EventBus
 from backend.routes import artifacts as artifacts_routes
+from backend.routes import chat as chat_routes
 from backend.routes import events as events_routes
 from backend.routes import projects as projects_routes
 
@@ -32,6 +33,7 @@ app.add_middleware(
 app.include_router(projects_routes.router)
 app.include_router(artifacts_routes.router)
 app.include_router(events_routes.router)
+app.include_router(chat_routes.router)
 
 
 @app.get("/api/health")

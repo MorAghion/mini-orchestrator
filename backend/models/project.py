@@ -33,8 +33,8 @@ class TaskStatus(str, Enum):
 
 
 class ProjectStatus(str, Enum):
-    CREATED = "created"
-    PLANNING = "planning"
+    SHAPING = "shaping"            # pre-run conversation with Lead; brief is being drafted
+    PLANNING = "planning"          # Lead is computing the wave DAG
     STAGE1_RUNNING = "stage1_running"
     STAGE1_REVIEW = "stage1_review"
     STAGE1_DONE = "stage1_done"
@@ -50,11 +50,41 @@ class WaveStatus(str, Enum):
 
 class Project(BaseModel):
     id: str
-    idea: str
-    status: ProjectStatus = ProjectStatus.CREATED
+    idea: str                                   # "" while in shaping
+    status: ProjectStatus = ProjectStatus.SHAPING
     output_dir: str
+    cost_cents: int = 0                         # accumulated equivalent cost across the run
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ChatRole(str, Enum):
+    USER = "user"
+    LEAD = "lead"
+
+
+class ChatMessage(BaseModel):
+    id: Optional[int] = None            # DB autoincrement, absent before insert
+    project_id: str
+    role: ChatRole
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class NoteStatus(str, Enum):
+    PENDING = "pending"
+    ABSORBED = "absorbed"
+    DROPPED = "dropped"
+
+
+class Note(BaseModel):
+    id: str                             # note-<hex>
+    project_id: str
+    content: str
+    source_msg_id: Optional[int] = None
+    status: NoteStatus = NoteStatus.PENDING
+    absorbed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class WavePlan(BaseModel):

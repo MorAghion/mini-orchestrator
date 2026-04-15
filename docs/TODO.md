@@ -60,17 +60,17 @@ architectural details live in [plan.md](plan.md).
 ### 4.1 Conversational Lead + right-panel redesign  🟡 in progress
 
 **Backend (4.1a):**
-- [ ] New project status `shaping` (draft exists before Stage 1 launches)
-- [ ] `lead_messages` table (persistent chat per project)
-- [ ] `notes_queue` table (user-dropped notes awaiting absorption into review)
-- [ ] `LeadAgent.chat()` with three personas:
-    - [ ] Shaper — asks clarifying questions pre-run, maintains draft brief
-    - [ ] Narrator — reports progress during run, queues user notes
-    - [ ] Refiner — accepts revision requests post-run, triggers targeted rework
-- [ ] `POST /api/projects/{id}/chat` — streamed response (SSE)
-- [ ] `POST /api/projects/{id}/launch` — transition `shaping → planning`
-- [ ] `POST /api/projects/{id}/notes` + `DELETE /.../notes/{note_id}`
-- [ ] Accumulate `total_cost_usd` from CLI envelope into a `projects` column
+- [x] New project status `shaping` (draft exists before Stage 1 launches)
+- [x] `lead_messages` table (persistent chat per project)
+- [x] `notes_queue` table (user-dropped notes awaiting absorption into review)
+- [x] `LeadAgent.chat()` with three personas:
+    - [x] Shaper — asks clarifying questions pre-run, maintains draft brief
+    - [x] Narrator — reports progress during run, queues user notes
+    - [x] Refiner — accepts revision requests post-run, triggers targeted rework
+- [x] `POST /api/projects/{id}/chat` — non-streaming for now (returns JSON once Lead finishes); streaming deferred
+- [x] `POST /api/projects/{id}/launch` — transition `shaping → planning`
+- [x] `POST /api/projects/{id}/notes` + `DELETE /.../notes/{note_id}` + `GET /.../notes`
+- [x] Accumulate `total_cost_usd` from CLI envelope into `projects.cost_cents`
 
 **Frontend (4.1b):**
 - [ ] Home screen: "Start new chat with Lead" (primary) + "I have a brief already" (secondary quick path)
