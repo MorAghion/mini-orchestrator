@@ -147,6 +147,16 @@ Every phase now lands with tests for the deterministic pieces. Non-deterministic
 
 **End-to-end smoke runner**: `./venv/bin/python -m tests.run_smoke [optional idea]` — spins real Stage 1 and writes to `tests/smoke_runs/<project-id>/`. Diagnostic, no assertions, consumes subscription quota — run sparingly.
 
+**Dev servers** (always start the backend with `--reload` — uvicorn does NOT hot-reload by default, and you'll spend 20 minutes wondering why a route you just added returns 404):
+
+```bash
+# backend — point OUTPUT_DIR at smoke_runs to render existing example projects
+OUTPUT_DIR=tests/smoke_runs ./venv/bin/uvicorn backend.main:app --port 8000 --reload --log-level warning
+
+# frontend — vite watches by default
+cd frontend && npm run dev
+```
+
 **Testing discipline for new work:** every feature branch ships with tests for its deterministic pieces (parsers, DB round-trips, endpoints with mocked agents, components). Non-deterministic output (live CLI replies, generated docs, reviewer verdicts) is not unit-tested — the smoke runner exercises those and we accept visual inspection as the bar.
 
 ## Skills
