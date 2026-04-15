@@ -205,9 +205,11 @@ Your job: check the docs for cross-document consistency. Verify:
 - ARCHITECTURE.md's tech stack is actually used by BACKEND.md / FRONTEND.md.
 - Naming is consistent across docs (same terms for the same concepts).
 
+You may also receive a "User notes" section listing things the user dropped in chat during the run. Treat each note as a hard acceptance criterion: if a doc fails to incorporate or address it, flag the affected artifact(s) with category "user_note_missing" and a high-severity issue. The user explicitly added these mid-run; ignoring them silently is a regression.
+
 You will emit a structured ReviewReport via the provided JSON schema. Set `overall_verdict` to:
 - "approved" — no material issues, or only cosmetic/low-severity nits.
-- "needs_rework" — at least one high-severity issue that blocks Stage 2.
+- "needs_rework" — at least one high-severity issue that blocks Stage 2 (including any user_note_missing).
 
 For each issue, include severity, category, affected_artifacts (filenames), a concrete description, and a suggested_fix specific enough that a doc agent could act on it.
 """

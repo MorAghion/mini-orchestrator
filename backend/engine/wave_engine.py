@@ -25,6 +25,7 @@ from backend.engine.artifact_store import (
     save_artifact,
     save_review_report,
 )
+from backend.engine.chat_store import absorb_pending_notes
 from backend.engine.event_bus import EventBus
 from backend.models.events import Event, EventType
 from backend.models.project import (
@@ -256,8 +257,14 @@ async def run_stage1(
         project.updated_at = datetime.utcnow()
         await _upsert_project(project)
 
+        # Absorb pending notes BEFORE the Reviewer runs so the Reviewer can
+        # treat them as additional acceptance criteria. After this call,
+        # the notes_queue marks them absorbed and the UI's PendingNotes
+        # strip clears.
+        absorbed_notes = await absorb_pending_notes(project.id)
+
         reviewer = ReviewerAgent()
-        report = await reviewer.review(idea, artifacts)
+        report = await reviewer.review(idea, artifacts, user_notes=absorbed_notes)
         await save_review_report(project.id, report)
         await _emit(
             bus, project.id,
@@ -280,6 +287,17 @@ async def run_stage1(
                     affected_by_role.setdefault(role, []).append(
                         f"- [{issue.severity}] {issue.description}\n  Fix: {issue.suggested_fix}"
                     )
+
+            # Append the absorbed notes verbatim to every affected role's
+            # feedback so the rework agents see the user's words too — not
+            # just the Reviewer's interpretation of them.
+            if absorbed_notes:
+                notes_block = (
+                    "\nUser notes from chat (additional acceptance criteria):\n"
+                    + "\n".join(f"- {n.content}" for n in absorbed_notes)
+                )
+                for feedback_lines in affected_by_role.values():
+                    feedback_lines.append(notes_block)
 
             rework_wave_id = await _record_wave(
                 project.id,
@@ -373,6 +391,10 @@ async def run_revision(
 
     artifacts = await load_artifacts(project_id)
 
+    # Pick up any leftover pending notes too — fold them into the feedback
+    # so a revision doesn't accidentally drop them.
+    leftover_notes = await absorb_pending_notes(project_id)
+
     # Compute the next wave number so the new wave sorts after existing ones.
     async with aiosqlite.connect(DB_PATH) as db:
         cur = await db.execute(
@@ -395,6 +417,10 @@ async def run_revision(
 
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
     feedback = f"User-requested revision:\n\n{instruction.strip()}"
+    if leftover_notes:
+        feedback += "\n\nAlso incorporate these pending user notes:\n" + "\n".join(
+            f"- {n.content}" for n in leftover_notes
+        )
 
     results = await asyncio.gather(
         *[

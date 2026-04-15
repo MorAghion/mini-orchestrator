@@ -154,8 +154,8 @@ architectural details live in [plan.md](plan.md).
 
 - [ ] Terminal chat wrapper (`python -m backend.chat <project-id>`) — same DB, power-user surface
 - [ ] API-key-only fallback path (for users without a Claude subscription; pay-as-you-go)
-- [x] **Testing infrastructure** — pytest/pytest-asyncio/httpx backend, vitest/RTL/jsdom frontend, ruff + py_compile in pre-commit, GitHub Actions CI (backend + frontend + precommit hygiene). 47 tests passing.
-- [ ] Wave engine coverage — currently only exercised end-to-end via smoke runner. Mock `DocWorkerAgent` / `ReviewerAgent`, assert rework-role routing, parallel/sequential wave execution, semaphore gating.
+- [x] **Testing infrastructure** — pytest/pytest-asyncio/httpx backend, vitest/RTL/jsdom frontend, ruff + py_compile in pre-commit, GitHub Actions CI (backend + frontend + precommit hygiene). 66 tests passing (47 backend + 19 frontend).
+- [x] Wave engine coverage (partial) — `tests/backend/test_wave_engine.py` covers notes absorption across review/rework/revision paths, wave-flag persistence (is_rework / is_revision), the empty-notes baseline. 6 tests. **Still TODO:** semaphore concurrency limits, parallel/sequential ordering within a wave, failure-cascade path.
 - [ ] Replace `datetime.utcnow()` everywhere with `datetime.now(UTC)` (deprecation warnings suppressed in pytest config until then).
 - [ ] Structured logging + event-trace observability
 - [ ] Auto-approve rules in `.claude/settings.local.json` for safe read-only commands
@@ -175,3 +175,5 @@ architectural details live in [plan.md](plan.md).
 1. can we add a feature that takes under consideration the user's subscription + project scope in order to determine the max number of agents working simultanuesly? this action could take place in the "bridge" part
 
 2. which of the docs generated is responsible of the user's app-level architecture. for example, if the user has several screens in which they have an "edit mode" - the app can have 1 single edit mode component used by every screen. Where do we define these kinds of structures?
+
+3. is there only 1 source of truth for the docs? meaning - first wave PRD and revision wave PRD will show the same text?
