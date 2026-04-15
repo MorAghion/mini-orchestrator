@@ -167,6 +167,21 @@ if [ ${#py_files[@]} -gt 0 ]; then
         done
         [ $compile_errors -eq 0 ] && ok "${#py_files[@]} python file(s) compile"
     fi
+
+    # ruff lint on the staged python files — fast (~100ms) and catches issues
+    # that py_compile doesn't (unused imports, style, bugbear, etc).
+    ruff_bin=""
+    if [ -x "venv/bin/ruff" ]; then ruff_bin="venv/bin/ruff";
+    elif command -v ruff >/dev/null; then ruff_bin="ruff"; fi
+
+    if [ -n "$ruff_bin" ]; then
+        if ! "$ruff_bin" check "${py_files[@]}" 2>/tmp/precommit_ruff_err; then
+            fail "ruff check failed:"
+            sed 's/^/    /' /tmp/precommit_ruff_err
+        else
+            ok "ruff clean on staged python"
+        fi
+    fi
 fi
 
 # ------------------------------------------------------------------------

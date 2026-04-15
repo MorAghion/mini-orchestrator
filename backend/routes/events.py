@@ -12,7 +12,6 @@ from sse_starlette.sse import EventSourceResponse
 
 from backend.engine.event_bus import EventBus
 
-
 router = APIRouter(prefix="/api/projects/{project_id}/events", tags=["events"])
 
 

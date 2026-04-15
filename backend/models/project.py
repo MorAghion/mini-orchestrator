@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -64,7 +64,7 @@ class ChatRole(str, Enum):
 
 
 class ChatMessage(BaseModel):
-    id: Optional[int] = None            # DB autoincrement, absent before insert
+    id: int | None = None            # DB autoincrement, absent before insert
     project_id: str
     role: ChatRole
     content: str
@@ -81,9 +81,9 @@ class Note(BaseModel):
     id: str                             # note-<hex>
     project_id: str
     content: str
-    source_msg_id: Optional[int] = None
+    source_msg_id: int | None = None
     status: NoteStatus = NoteStatus.PENDING
-    absorbed_at: Optional[datetime] = None
+    absorbed_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -98,8 +98,8 @@ class Wave(BaseModel):
     number: int
     roles: list[AgentRole]
     status: WaveStatus = WaveStatus.PENDING
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 class DocTask(BaseModel):
@@ -109,10 +109,10 @@ class DocTask(BaseModel):
     wave_id: str
     role: AgentRole
     status: TaskStatus = TaskStatus.PENDING
-    artifact_id: Optional[str] = None
-    error: Optional[str] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    artifact_id: str | None = None
+    error: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 class Artifact(BaseModel):

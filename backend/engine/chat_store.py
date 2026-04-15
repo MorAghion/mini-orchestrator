@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 import aiosqlite
 
 from backend.config import DB_PATH
 from backend.models.project import ChatMessage, ChatRole, Note, NoteStatus
-
 
 # ---------------------------------------------------------------------------
 # Chat messages
@@ -74,7 +72,7 @@ def _new_note_id() -> str:
 async def add_note(
     project_id: str,
     content: str,
-    source_msg_id: Optional[int] = None,
+    source_msg_id: int | None = None,
 ) -> Note:
     note_id = _new_note_id()
     now = datetime.utcnow().isoformat()
@@ -97,7 +95,7 @@ async def add_note(
 
 async def list_notes(
     project_id: str,
-    status: Optional[NoteStatus] = NoteStatus.PENDING,
+    status: NoteStatus | None = NoteStatus.PENDING,
 ) -> list[Note]:
     """List notes for a project; defaults to pending only."""
     if status is None:

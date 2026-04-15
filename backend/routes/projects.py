@@ -15,7 +15,7 @@ import json
 import os
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import aiosqlite
 from fastapi import APIRouter, HTTPException, Request, status
@@ -25,7 +25,6 @@ from backend.config import DB_PATH
 from backend.engine.artifact_store import project_dir
 from backend.engine.wave_engine import run_stage1
 from backend.models.project import ProjectStatus
-
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -37,7 +36,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 class CreateProjectRequest(BaseModel):
     # Optional at creation time — shaping phase fills this via chat. If a user
     # already has a brief, they can pass it straight in and skip to launch.
-    idea: Optional[str] = None
+    idea: str | None = None
 
 
 class CreateProjectResponse(BaseModel):
@@ -77,7 +76,7 @@ class LaunchRequest(BaseModel):
     # If the shaper chat produced a brief, the client passes it here when
     # launching. If omitted, we use whatever is already in projects.idea
     # (set either at creation time or via an earlier launch that failed).
-    idea: Optional[str] = None
+    idea: str | None = None
 
 
 @router.post("/{project_id}/launch", status_code=status.HTTP_202_ACCEPTED)
@@ -216,5 +215,5 @@ async def get_review(project_id: str) -> dict[str, Any]:
     path = os.path.join(project_dir(project_id), "review_report.json")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="review report not available yet")
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)

@@ -96,7 +96,7 @@ async def load_artifacts(project_id: str) -> dict[AgentRole, str]:
             # DB row exists but file is gone — skip. The alternative is to
             # delete the stale row, but we prefer non-destructive reads.
             continue
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             out[AgentRole(role_value)] = f.read()
     return out
 
@@ -109,7 +109,7 @@ async def read_artifact(project_id: str, filename: str) -> str | None:
     path = os.path.join(docs_dir(project_id), filename)
     if not os.path.exists(path):
         return None
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return f.read()
 
 

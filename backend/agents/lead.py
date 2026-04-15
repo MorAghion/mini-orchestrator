@@ -18,7 +18,6 @@ from backend.agents.prompts.chat import PROMPTS as CHAT_PROMPTS
 from backend.agents.prompts.stage1 import PROMPTS as STAGE1_PROMPTS
 from backend.models.project import AgentRole, ChatMessage, ChatRole, WavePlan
 
-
 PLAN_WAVES_TOOL_SCHEMA = {
     "type": "object",
     "properties": {

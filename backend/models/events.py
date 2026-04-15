@@ -5,7 +5,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 EventType = Literal[
     "project:created",
     "project:planned",

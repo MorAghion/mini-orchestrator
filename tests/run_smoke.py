@@ -25,7 +25,6 @@ os.environ["OUTPUT_DIR"] = _SMOKE_DIR
 from backend.database import init_db  # noqa: E402  (after env var set)
 from backend.engine.wave_engine import run_stage1  # noqa: E402
 
-
 DEFAULT_IDEA = "A simple todo app with user auth, tags, and due dates"
 
 

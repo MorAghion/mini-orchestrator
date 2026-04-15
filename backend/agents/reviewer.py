@@ -6,7 +6,6 @@ from backend.agents.base import BaseAgent
 from backend.agents.prompts.stage1 import FILENAMES, PROMPTS
 from backend.models.project import AgentRole, ReviewReport
 
-
 REVIEW_REPORT_SCHEMA = {
     "type": "object",
     "properties": {

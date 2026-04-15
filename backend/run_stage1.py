@@ -24,7 +24,7 @@ def _parse_args() -> str:
     parser.add_argument("--idea-file", help="Path to a file containing the project idea.")
     args = parser.parse_args()
     if args.idea_file:
-        with open(args.idea_file, "r", encoding="utf-8") as f:
+        with open(args.idea_file, encoding="utf-8") as f:
             return f.read().strip()
     if args.idea:
         return args.idea
