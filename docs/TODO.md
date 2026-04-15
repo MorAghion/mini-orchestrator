@@ -73,12 +73,12 @@ architectural details live in [plan.md](plan.md).
 - [x] Accumulate `total_cost_usd` from CLI envelope into `projects.cost_cents`
 
 **Frontend (4.1b):**
-- [ ] Home screen: "Start new chat with Lead" (primary) + "I have a brief already" (secondary quick path)
-- [ ] `Chat` component — message list + composer + typing/streaming indicator
-- [ ] `PendingNotes` strip — chips, click-to-drop, auto-clears when absorbed
-- [ ] Right panel re-layout: Chat (top, always-on) · PendingNotes · Review · Activity (collapsed)
-- [ ] "Launch Stage 1" affordance surfaces when Lead proposes a brief
-- [ ] Cost indicator in activity/header ("$0.42 equivalent — free under Max")
+- [x] Home screen: "+ Start new project" creates a shaping project and jumps into chat
+- [x] `Chat` component — message list + composer + animated typing indicator + markdown rendering for Lead bubbles
+- [x] `PendingNotes` strip — chips with click-to-drop, hidden when empty
+- [x] Right panel re-layout: Chat (top) · PendingNotes · Review · Activity (collapsed)
+- [x] "Launch Stage 1 →" CTA surfaces above the composer when the Lead has set the brief
+- [x] Cost indicator in header ("$0.09 equiv · free under Max")
 
 **Post-run + polish (4.1c):**
 - [ ] Revision requests trigger a targeted rework wave (distinct label from reviewer-rework)

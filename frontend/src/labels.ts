@@ -39,7 +39,7 @@ export const ROLE_FILENAME: Record<string, string> = {
 
 /** Friendly labels for backend project statuses. */
 export const PROJECT_STATUS_LABEL: Record<string, string> = {
-  created: "Created",
+  shaping: "Shaping the brief",
   planning: "Planning the work",
   stage1_running: "Generating documents",
   stage1_review: "Reviewing for consistency",
@@ -59,14 +59,15 @@ export const TASK_STATUS_LABEL: Record<string, string> = {
 
 /** Top-level phase names for the UI — plain English, no "Stage 1". */
 export const PHASE_LABEL: Record<string, string> = {
+  shaping: "Shaping",
   documents: "Documents generation",
   execution: "Code execution", // for later Stage 2
 };
 
 /** Human-readable description of a project's current phase. */
 export function phaseLabelFor(status: string): string {
-  // All stage1_* statuses live under the "Documents generation" phase.
-  if (status === "created" || status === "planning") return "Planning";
+  if (status === "shaping") return PHASE_LABEL.shaping;
+  if (status === "planning") return "Planning";
   if (status.startsWith("stage1")) return PHASE_LABEL.documents;
   if (status === "failed") return "Failed";
   return status;

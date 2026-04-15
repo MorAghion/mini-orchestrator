@@ -1,68 +1,96 @@
 import { useEffect, useState } from "react";
-import { api, DocTask } from "./api/client";
+import { api, DocTask, ProjectStatus, ProjectSummary } from "./api/client";
 import { ActivityPanel } from "./components/ActivityPanel";
 import { ArtifactViewer } from "./components/ArtifactViewer";
 import { Board } from "./components/Board";
-import { ProjectForm } from "./components/ProjectForm";
+import { Chat } from "./components/Chat";
+import { PendingNotes } from "./components/PendingNotes";
 import { ReviewPanel } from "./components/ReviewPanel";
 import { Stage, StageTabs } from "./components/StageTabs";
+import { useChat } from "./hooks/useChat";
 import { useEventStream } from "./hooks/useEventStream";
+import { useNotes } from "./hooks/useNotes";
 import { useProject } from "./hooks/useProject";
 import { useTheme } from "./hooks/useTheme";
 import { PROJECT_STATUS_LABEL, phaseLabelFor } from "./labels";
 
-/** Single-page app: project selector / creator, then board view with live SSE. */
 export function App() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [openTask, setOpenTask] = useState<DocTask | null>(null);
   const [stage, setStage] = useState<Stage>("documents");
+  const [launching, setLaunching] = useState(false);
 
   const { events, connected } = useEventStream(projectId);
-  // Re-fetch project detail whenever a relevant event arrives
   const { data, refetch } = useProject(projectId, events.length);
+  const { messages, sending, send, refresh: refreshChat } = useChat(projectId);
+  const { notes, drop: dropNote, refresh: refreshNotes } = useNotes(
+    projectId,
+    events.length,
+  );
 
-  useEffect(() => {
-    // Nothing selected on load — user goes through ProjectForm or picks existing
-  }, []);
+  const status: ProjectStatus = data?.project.status ?? "shaping";
+
+  // When the Lead emits BRIEF_READY the idea gets saved; the next refetch
+  // will reflect that. Trigger one now so the UI updates immediately.
+  const handleSend = async (content: string) => {
+    const reply = await send(content);
+    if (reply?.brief_ready || reply?.note_queued) {
+      await refetch();
+      await refreshNotes();
+    }
+  };
+
+  const handleLaunch = async () => {
+    if (!projectId) return;
+    setLaunching(true);
+    try {
+      await api.launchProject(projectId);
+      await refetch();
+      await refreshChat();
+    } finally {
+      setLaunching(false);
+    }
+  };
 
   if (!projectId) {
     return (
       <div className="app">
         <Header />
-        <ProjectList onPick={setProjectId} onNew={() => setProjectId("__new")} />
+        <ProjectList onPick={setProjectId} onCreate={setProjectId} />
       </div>
     );
   }
 
-  if (projectId === "__new") {
-    return (
-      <div className="app">
-        <Header />
-        <ProjectForm onCreated={(id) => setProjectId(id)} />
-      </div>
-    );
-  }
+  const readyToLaunch =
+    status === "shaping" && (data?.project.idea ?? "").trim().length > 0;
 
   return (
     <div className="app">
       <Header
         right={
-          <button
-            className="btn"
-            onClick={() => {
-              setProjectId(null);
-              setOpenTask(null);
-            }}
-          >
-            ← Back to projects
-          </button>
+          <>
+            <CostIndicator cents={data?.project.cost_cents ?? 0} />
+            <button
+              className="btn"
+              onClick={() => {
+                setProjectId(null);
+                setOpenTask(null);
+              }}
+            >
+              ← Back
+            </button>
+          </>
         }
       />
       <div className="app-main">
         <div className="main-column">
           <StageTabs current={stage} onChange={setStage} />
           {data ? (
-            <Board detail={data} onTaskClick={setOpenTask} />
+            status === "shaping" ? (
+              <ShapingBoard idea={data.project.idea} />
+            ) : (
+              <Board detail={data} onTaskClick={setOpenTask} />
+            )
           ) : (
             <div className="board">
               <div style={{ color: "var(--text-muted)", padding: 16 }}>
@@ -72,8 +100,21 @@ export function App() {
           )}
         </div>
         <div className="side-panel">
+          <Chat
+            status={status}
+            messages={messages}
+            sending={sending}
+            onSend={handleSend}
+            phaseLabel={phaseLabelFor(status)}
+            readyToLaunch={readyToLaunch}
+            onLaunch={handleLaunch}
+            launching={launching}
+          />
+          <PendingNotes notes={notes} onDrop={dropNote} />
+          {status !== "shaping" && (
+            <ReviewPanel projectId={projectId} tick={events.length} />
+          )}
           <ActivityPanel events={events} connected={connected} />
-          <ReviewPanel projectId={projectId} tick={events.length} />
         </div>
       </div>
 
@@ -87,6 +128,71 @@ export function App() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Placeholder board shown while the project is still in shaping phase. */
+function ShapingBoard({ idea }: { idea: string }) {
+  return (
+    <div className="board">
+      <div className="board-header">
+        <div>
+          <div className="phase-label">Shaping the brief</div>
+          <h2>
+            {idea
+              ? idea.length > 80
+                ? idea.slice(0, 79) + "…"
+                : idea
+              : "No brief yet — chat with the Lead on the right"}
+          </h2>
+          <div className="meta" style={{ marginTop: 6 }}>
+            Once the Lead proposes a brief you approve, you'll get a "Launch
+            Stage 1" button below the chat. Stage 1 then runs 8 specialist
+            agents and produces design docs.
+          </div>
+        </div>
+      </div>
+      {idea && (
+        <div
+          style={{
+            background: "var(--bg-sprint-row)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            padding: 14,
+            marginTop: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 0.5,
+              textTransform: "uppercase",
+              color: "var(--gold-active)",
+              marginBottom: 6,
+            }}
+          >
+            Proposed brief
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+            {idea}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CostIndicator({ cents }: { cents: number }) {
+  const dollars = (cents / 100).toFixed(2);
+  return (
+    <div
+      className="cost-indicator"
+      title="Equivalent API cost across this project's CLI calls — $0 under Claude Max"
+    >
+      <span className="cost-amount">${dollars}</span>
+      <span className="cost-caption">equiv · free under Max</span>
     </div>
   );
 }
@@ -116,52 +222,70 @@ function Header({ right }: { right?: React.ReactNode }) {
 
 function ProjectList({
   onPick,
-  onNew,
+  onCreate,
 }: {
   onPick: (id: string) => void;
-  onNew: () => void;
+  onCreate: (id: string) => void;
 }) {
-  const [projects, setProjects] = useState<
-    { id: string; idea: string; status: string; updated_at: string }[] | null
-  >(null);
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     api.listProjects().then(setProjects);
   }, []);
 
+  const handleNew = async () => {
+    setCreating(true);
+    try {
+      const { project_id } = await api.createProject();
+      onCreate(project_id);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="form-panel">
       <h2>Projects</h2>
-      <p>Pick an existing run or start a new one.</p>
+      <p>
+        Start a new project by chatting with the Lead, or pick up an existing
+        run.
+      </p>
+      <div className="actions" style={{ justifyContent: "flex-start", margin: "4px 0 18px" }}>
+        <button className="btn btn-primary" onClick={handleNew} disabled={creating}>
+          {creating ? "Creating…" : "+ Start new project"}
+        </button>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {projects === null && (
           <div style={{ color: "var(--text-muted)" }}>Loading…</div>
         )}
         {projects?.length === 0 && (
-          <div style={{ color: "var(--text-muted)" }}>No projects yet.</div>
+          <div style={{ color: "var(--text-muted)" }}>
+            No projects yet. Click <strong>Start new project</strong> above.
+          </div>
         )}
-        {projects?.map((p) => (
-          <button
-            key={p.id}
-            className="btn"
-            onClick={() => onPick(p.id)}
-            style={{ textAlign: "left" }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 500 }}>
-              {p.idea.length > 90 ? p.idea.slice(0, 89) + "…" : p.idea}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              {phaseLabelFor(p.status)} ·{" "}
-              {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
-              {new Date(p.updated_at).toLocaleString()}
-            </div>
-          </button>
-        ))}
-      </div>
-      <div className="actions">
-        <button className="btn btn-primary" onClick={onNew}>
-          + New project
-        </button>
+        {projects?.map((p) => {
+          const title = p.idea?.trim() || "(untitled — brief not yet set)";
+          return (
+            <button
+              key={p.id}
+              className="btn"
+              onClick={() => onPick(p.id)}
+              style={{ textAlign: "left" }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
+                {title.length > 90 ? title.slice(0, 89) + "…" : title}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                {phaseLabelFor(p.status)} ·{" "}
+                {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
+                ${(p.cost_cents / 100).toFixed(2)} equiv ·{" "}
+                {new Date(p.updated_at).toLocaleString()}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

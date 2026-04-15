@@ -2,10 +2,19 @@
  * Calls are same-origin via the Vite dev proxy (/api -> http://localhost:8000).
  */
 
+export type ProjectStatus =
+  | "shaping"
+  | "planning"
+  | "stage1_running"
+  | "stage1_review"
+  | "stage1_done"
+  | "failed";
+
 export interface ProjectSummary {
   id: string;
   idea: string;
-  status: string;
+  status: ProjectStatus;
+  cost_cents: number;
   created_at: string;
   updated_at: string;
 }
@@ -59,6 +68,31 @@ export interface ReviewReport {
   issues: ReviewIssue[];
 }
 
+export interface ChatMessage {
+  id: number;
+  role: "user" | "lead";
+  content: string;
+  created_at: string;
+}
+
+export interface ChatReply {
+  user_message_id: number;
+  lead_message_id: number;
+  display_text: string;
+  brief_ready: boolean;
+  note_queued: string | null;
+  revision_request: string | null;
+  cost_usd: number;
+}
+
+export interface Note {
+  id: string;
+  content: string;
+  source_msg_id: number | null;
+  status: "pending" | "absorbed" | "dropped";
+  created_at: string;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
@@ -81,14 +115,47 @@ async function post<T, B>(path: string, body: B): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function del(path: string): Promise<void> {
+  const res = await fetch(path, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) {
+    throw new Error(`DELETE ${path} → ${res.status}`);
+  }
+}
+
 export const api = {
+  // Projects
   listProjects: () => get<ProjectSummary[]>("/api/projects"),
   getProject: (id: string) => get<ProjectDetail>(`/api/projects/${id}`),
+  createProject: (idea?: string) =>
+    post<{ project_id: string; status: ProjectStatus }, { idea?: string }>(
+      "/api/projects",
+      idea ? { idea } : {},
+    ),
+  launchProject: (id: string, idea?: string) =>
+    post<{ project_id: string; status: string }, { idea?: string }>(
+      `/api/projects/${id}/launch`,
+      idea ? { idea } : {},
+    ),
+
+  // Artifacts
   getArtifacts: (id: string) =>
     get<ArtifactMeta[]>(`/api/projects/${id}/artifacts`),
   getArtifactContent: (id: string, filename: string) =>
     getText(`/api/projects/${id}/artifacts/${filename}`),
   getReview: (id: string) => get<ReviewReport>(`/api/projects/${id}/review`),
-  createProject: (idea: string) =>
-    post<{ project_id: string }, { idea: string }>("/api/projects", { idea }),
+
+  // Chat
+  getChatHistory: (id: string) =>
+    get<ChatMessage[]>(`/api/projects/${id}/chat`),
+  sendChat: (id: string, content: string) =>
+    post<ChatReply, { content: string }>(`/api/projects/${id}/chat`, {
+      content,
+    }),
+
+  // Notes queue
+  getNotes: (id: string) => get<Note[]>(`/api/projects/${id}/notes`),
+  addNote: (id: string, content: string) =>
+    post<Note, { content: string }>(`/api/projects/${id}/notes`, { content }),
+  deleteNote: (projectId: string, noteId: string) =>
+    del(`/api/projects/${projectId}/notes/${noteId}`),
 };

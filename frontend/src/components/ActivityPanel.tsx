@@ -1,27 +1,38 @@
+import { useState } from "react";
 import { OrchestratorEvent } from "../hooks/useEventStream";
 
 interface Props {
   events: OrchestratorEvent[];
   connected: boolean;
+  /** Start collapsed by default when used as the secondary debug surface. */
+  defaultCollapsed?: boolean;
 }
 
-export function ActivityPanel({ events, connected }: Props) {
-  return (
-    <div className="panel">
-      <h3>
-        Lead chat · activity feed{" "}
-        <span
-          style={{
-            fontSize: 10,
-            color: connected ? "var(--backend)" : "var(--text-muted)",
-            marginLeft: 6,
-          }}
-        >
-          ● {connected ? "live" : "offline"}
-        </span>
-      </h3>
+export function ActivityPanel({ events, connected, defaultCollapsed = true }: Props) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
-      <div className="activity">
+  return (
+    <div className={`panel collapsible ${collapsed ? "collapsed" : ""}`}>
+      <div className="panel-header" onClick={() => setCollapsed((c) => !c)}>
+        <h3>
+          Activity log{" "}
+          <span
+            style={{
+              fontSize: 10,
+              color: connected ? "var(--backend)" : "var(--text-muted)",
+              marginLeft: 6,
+            }}
+          >
+            ● {connected ? "live" : "offline"}
+          </span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 6 }}>
+            {events.length} event{events.length === 1 ? "" : "s"}
+          </span>
+        </h3>
+        <span className="collapse-chev">{collapsed ? "▸" : "▾"}</span>
+      </div>
+
+      <div className="activity" style={{ marginTop: collapsed ? 0 : 10 }}>
         {events.length === 0 && (
           <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
             No events yet.
