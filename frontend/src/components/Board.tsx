@@ -67,8 +67,16 @@ function WaveRow({
   const [expanded, setExpanded] = useState(isActive || hasError || wave.status !== "done");
   const doneCount = tasks.filter((t) => t.status === "done").length;
 
+  const kindClass = wave.is_revision
+    ? " wave-revision"
+    : wave.is_rework
+      ? " wave-rework"
+      : "";
+
   return (
-    <div className={`wave ${wave.status}${expanded ? "" : " collapsed"}`}>
+    <div
+      className={`wave ${wave.status}${expanded ? "" : " collapsed"}${kindClass}`}
+    >
       <div
         className="wave-header"
         role="button"
@@ -94,7 +102,7 @@ function WaveRow({
                   : `Wave ${wave.number}`}
             </span>
             {wave.is_revision && (
-              <span className="rework-badge">✎ User revision</span>
+              <span className="revision-badge">✎ User revision</span>
             )}
             {wave.is_rework && !wave.is_revision && (
               <span className="rework-badge">↻ Fix pass</span>
