@@ -147,8 +147,8 @@ async def get_project(project_id: str) -> dict[str, Any]:
         }
 
         cur = await db.execute(
-            "SELECT id, number, roles, status, started_at, completed_at FROM waves "
-            "WHERE project_id = ? ORDER BY number",
+            "SELECT id, number, roles, status, is_rework, started_at, completed_at "
+            "FROM waves WHERE project_id = ? ORDER BY number",
             (project_id,),
         )
         waves = [
@@ -157,8 +157,9 @@ async def get_project(project_id: str) -> dict[str, Any]:
                 "number": w[1],
                 "roles": json.loads(w[2]),
                 "status": w[3],
-                "started_at": w[4],
-                "completed_at": w[5],
+                "is_rework": bool(w[4]),
+                "started_at": w[5],
+                "completed_at": w[6],
             }
             for w in await cur.fetchall()
         ]

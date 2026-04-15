@@ -86,12 +86,16 @@ class DocTask(BaseModel):
 
 
 class Artifact(BaseModel):
-    """A generated engineering doc."""
+    """Metadata for a generated engineering doc.
+
+    The actual markdown content lives on disk (see engine.artifact_store) —
+    read it via `read_artifact(project_id, filename)` rather than carrying
+    large strings through this model.
+    """
     id: str
     project_id: str
     role: AgentRole
     filename: str  # e.g. PRD.md, ARCHITECTURE.md
-    content: str
     version: int = 1  # bumped on rework
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

@@ -1,4 +1,12 @@
-import { ProjectDetail, DocTask, Wave } from "../api/client";
+import { useState } from "react";
+import { DocTask, ProjectDetail, Wave } from "../api/client";
+import {
+  PROJECT_STATUS_LABEL,
+  ROLE_BADGE,
+  ROLE_TITLE,
+  TASK_STATUS_LABEL,
+  phaseLabelFor,
+} from "../labels";
 
 interface Props {
   detail: ProjectDetail;
@@ -8,21 +16,21 @@ interface Props {
 export function Board({ detail, onTaskClick }: Props) {
   const { project, waves, tasks } = detail;
   const tasksByWave = groupBy(tasks, (t) => t.wave_id);
+  const doneCount = tasks.filter((t) => t.status === "done").length;
 
   return (
     <div className="board">
       <div className="board-header">
         <div>
+          <div className="phase-label">{phaseLabelFor(project.status)}</div>
           <h2>{truncate(project.idea, 80)}</h2>
           <div className="meta">
-            {project.id} · status:&nbsp;
-            <strong style={{ color: "var(--gold-active)" }}>
-              {project.status}
-            </strong>
+            {PROJECT_STATUS_LABEL[project.status] ?? project.status} ·{" "}
+            {doneCount}/{tasks.length} agents done
           </div>
         </div>
         <div className="meta">
-          {waves.length} waves · {tasks.length} tasks
+          {project.id}
         </div>
       </div>
 
@@ -53,31 +61,68 @@ function WaveRow({
   tasks: DocTask[];
   onTaskClick: (t: DocTask) => void;
 }) {
+  // Collapse done waves by default; active ones stay expanded.
+  const isActive = wave.status === "running" || tasks.some((t) => t.status === "running");
+  const hasError = tasks.some((t) => t.status === "error");
+  const [expanded, setExpanded] = useState(isActive || hasError || wave.status !== "done");
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+
   return (
-    <div className={`wave ${wave.status}`}>
-      <div className="wave-header">
-        <span className="number">Wave {wave.number}</span>
-        <span style={{ color: "var(--text-muted)", fontSize: 11 }}>
-          {wave.roles.join(" · ")}
+    <div className={`wave ${wave.status}${expanded ? "" : " collapsed"}`}>
+      <div
+        className="wave-header"
+        role="button"
+        tabIndex={0}
+        onClick={() => setExpanded((x) => !x)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((x) => !x);
+          }
+        }}
+        aria-expanded={expanded}
+        aria-label={`Wave ${wave.number}, ${expanded ? "collapse" : "expand"}`}
+      >
+        <span className="toggle-indicator">{expanded ? "▾" : "▸"}</span>
+        <div className="wave-title">
+          <div className="wave-title-row">
+            <span className="number">
+              {wave.is_rework ? "Rework round" : `Wave ${wave.number}`}
+            </span>
+            {wave.is_rework && <span className="rework-badge">↻ Fix pass</span>}
+            <span className="wave-roles">
+              {wave.roles.map((r) => ROLE_BADGE[r] ?? r).join(" · ")}
+            </span>
+          </div>
+          {wave.is_rework && (
+            <div className="wave-subtitle">
+              Reviewer flagged issues — these agents re-ran to address feedback.
+            </div>
+          )}
+        </div>
+        <span className="meta-right">
+          {doneCount}/{tasks.length || wave.roles.length}
         </span>
         <span className={`status ${wave.status}`}>{wave.status}</span>
       </div>
-      <div className="wave-tasks">
-        {tasks.length === 0 && (
-          <div
-            style={{
-              color: "var(--text-muted)",
-              fontSize: 12,
-              padding: "6px 0",
-            }}
-          >
-            Not started
-          </div>
-        )}
-        {tasks.map((t) => (
-          <TaskCard key={t.id} task={t} onClick={() => onTaskClick(t)} />
-        ))}
-      </div>
+      {expanded && (
+        <div className="wave-tasks">
+          {tasks.length === 0 && (
+            <div
+              style={{
+                color: "var(--text-muted)",
+                fontSize: 12,
+                padding: "6px 0",
+              }}
+            >
+              Not started
+            </div>
+          )}
+          {tasks.map((t) => (
+            <TaskCard key={t.id} task={t} onClick={() => onTaskClick(t)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -94,12 +139,16 @@ function TaskCard({
       className={`card role-${task.role} status-${task.status}`}
       onClick={onClick}
     >
-      <div className="role-badge">{labelForRole(task.role)}</div>
-      <p className="title">{titleForRole(task.role)}</p>
-      <div className="meta">
-        {task.status}
-        {task.error && <> · {truncate(task.error, 60)}</>}
+      <div className="card-top-row">
+        <span className="role-badge">{ROLE_BADGE[task.role] ?? task.role}</span>
+        <span className={`status-chip ${task.status}`}>
+          {TASK_STATUS_LABEL[task.status] ?? task.status}
+        </span>
       </div>
+      <p className="title">{ROLE_TITLE[task.role] ?? task.role}</p>
+      {task.error && (
+        <div className="meta">{truncate(task.error, 60)}</div>
+      )}
     </div>
   );
 }
@@ -113,36 +162,6 @@ function groupBy<T, K>(items: T[], key: (t: T) => K): Map<K, T[]> {
     else map.set(k, [item]);
   }
   return map;
-}
-
-function labelForRole(role: string): string {
-  const abbrev: Record<string, string> = {
-    prd: "PRD",
-    architect: "ARCH",
-    backend_doc: "BE",
-    frontend_doc: "FE",
-    security_doc: "SEC",
-    devops_doc: "OPS",
-    ui_design_doc: "UI",
-    screens_doc: "SCR",
-    reviewer: "REV",
-  };
-  return abbrev[role] ?? role.toUpperCase();
-}
-
-function titleForRole(role: string): string {
-  const titles: Record<string, string> = {
-    prd: "Product Requirements",
-    architect: "System Architecture",
-    backend_doc: "Backend Design",
-    frontend_doc: "Frontend Design",
-    security_doc: "Security Design",
-    devops_doc: "DevOps / Environments",
-    ui_design_doc: "UI Design System",
-    screens_doc: "Screen Inventory",
-    reviewer: "Consistency Review",
-  };
-  return titles[role] ?? role;
 }
 
 function truncate(s: string, n: number): string {

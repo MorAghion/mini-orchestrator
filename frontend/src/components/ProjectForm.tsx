@@ -28,10 +28,11 @@ export function ProjectForm({ onCreated }: Props) {
     <div className="form-panel">
       <h2>New project</h2>
       <p>
-        Describe the product you want to build. The orchestrator generates eight
-        engineering design docs (PRD, Architecture, Backend, Frontend, Security,
-        DevOps, UI system, Screens), runs them through a consistency reviewer,
-        and patches any issues in a single rework cycle.
+        Describe the product you want to build. The orchestrator turns your
+        idea into eight engineering design docs (PRD, Architecture, Backend,
+        Frontend, Security, DevOps, UI system, Screens), then a reviewer
+        checks them for consistency and patches any issues in one rework
+        cycle.
       </p>
       <form onSubmit={handleSubmit}>
         <textarea
@@ -49,7 +50,7 @@ export function ProjectForm({ onCreated }: Props) {
             className="btn btn-primary"
             disabled={busy || !idea.trim()}
           >
-            {busy ? "Starting…" : "Run Stage 1"}
+            {busy ? "Starting…" : "Generate documents"}
           </button>
         </div>
       </form>

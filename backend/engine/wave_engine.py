@@ -68,19 +68,25 @@ async def _upsert_project(project: Project) -> None:
         await db.commit()
 
 
-async def _record_wave(project_id: str, number: int, roles: list[AgentRole]) -> str:
+async def _record_wave(
+    project_id: str,
+    number: int,
+    roles: list[AgentRole],
+    is_rework: bool = False,
+) -> str:
     wave_id = f"wave-{uuid.uuid4().hex[:12]}"
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT INTO waves (id, project_id, number, roles, status, started_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO waves (id, project_id, number, roles, status, is_rework, started_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 wave_id,
                 project_id,
                 number,
                 json.dumps([r.value for r in roles]),
                 WaveStatus.RUNNING.value,
+                1 if is_rework else 0,
                 now,
             ),
         )
@@ -249,7 +255,10 @@ async def run_stage1(idea: str, bus: EventBus | None = None) -> Stage1Result:
                     )
 
             rework_wave_id = await _record_wave(
-                project.id, len(plan.waves) + 1, list(affected_by_role.keys())
+                project.id,
+                len(plan.waves) + 1,
+                list(affected_by_role.keys()),
+                is_rework=True,
             )
             await _emit(
                 bus, project.id, "wave:started",
