@@ -14,6 +14,13 @@ interface Props {
   readyToLaunch: boolean;
   onLaunch?: () => void;
   launching?: boolean;
+  /** When the Lead's last reply included REVISION_REQUEST, the parent passes
+   * the suggestion text here so we can render an "Apply" affordance.
+   * Pass null/undefined to hide. */
+  pendingRevision?: string | null;
+  onApplyRevision?: (instruction: string) => void;
+  onDismissRevision?: () => void;
+  applyingRevision?: boolean;
 }
 
 export function Chat({
@@ -25,6 +32,10 @@ export function Chat({
   readyToLaunch,
   onLaunch,
   launching,
+  pendingRevision,
+  onApplyRevision,
+  onDismissRevision,
+  applyingRevision,
 }: Props) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -98,6 +109,33 @@ export function Chat({
           >
             {launching ? "Launching…" : "Launch Stage 1 →"}
           </button>
+        </div>
+      )}
+
+      {pendingRevision && onApplyRevision && (
+        <div className="chat-revision-cta">
+          <div className="revision-text">
+            <span className="revision-label">Lead suggests a revision:</span>
+            <span className="revision-instruction">{pendingRevision}</span>
+          </div>
+          <div className="revision-actions">
+            {onDismissRevision && (
+              <button
+                className="btn"
+                onClick={onDismissRevision}
+                disabled={applyingRevision}
+              >
+                Skip
+              </button>
+            )}
+            <button
+              className="btn btn-primary"
+              onClick={() => onApplyRevision(pendingRevision)}
+              disabled={applyingRevision}
+            >
+              {applyingRevision ? "Applying…" : "Apply revision →"}
+            </button>
+          </div>
         </div>
       )}
 

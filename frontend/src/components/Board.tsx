@@ -87,18 +87,32 @@ function WaveRow({
         <div className="wave-title">
           <div className="wave-title-row">
             <span className="number">
-              {wave.is_rework ? "Rework round" : `Wave ${wave.number}`}
+              {wave.is_revision
+                ? "Revision round"
+                : wave.is_rework
+                  ? "Rework round"
+                  : `Wave ${wave.number}`}
             </span>
-            {wave.is_rework && <span className="rework-badge">↻ Fix pass</span>}
+            {wave.is_revision && (
+              <span className="rework-badge">✎ User revision</span>
+            )}
+            {wave.is_rework && !wave.is_revision && (
+              <span className="rework-badge">↻ Fix pass</span>
+            )}
             <span className="wave-roles">
               {wave.roles.map((r) => ROLE_BADGE[r] ?? r).join(" · ")}
             </span>
           </div>
-          {wave.is_rework && (
+          {wave.is_revision ? (
+            <div className="wave-subtitle">
+              You requested a change — these agents re-ran with your instruction
+              and the Reviewer re-checked.
+            </div>
+          ) : wave.is_rework ? (
             <div className="wave-subtitle">
               Reviewer flagged issues — these agents re-ran to address feedback.
             </div>
-          )}
+          ) : null}
         </div>
         <span className="meta-right">
           {doneCount}/{tasks.length || wave.roles.length}

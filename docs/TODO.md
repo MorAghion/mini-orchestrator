@@ -81,7 +81,12 @@ architectural details live in [plan.md](plan.md).
 - [x] Cost indicator in header ("$0.09 equiv · free under Max")
 
 **Post-run + polish (4.1c):**
-- [ ] Revision requests trigger a targeted rework wave (distinct label from reviewer-rework)
+- [x] `POST /api/projects/{id}/revise` endpoint: default-role-set fallback, explicit role list, validation guards
+- [x] `run_revision()` in wave_engine — re-runs affected agents with the user instruction, re-runs the Reviewer, emits SSE
+- [x] Wave schema: `is_revision` column + migration; revision waves distinct from reviewer-rework waves
+- [x] Frontend Chat surfaces "Lead suggests a revision: … [Apply / Skip]" CTA when refiner emits REVISION_REQUEST
+- [x] Frontend Board labels revision rounds ("Revision round" + ✎ User revision badge) — distinct from "Rework round" + ↻ Fix pass
+- [x] Tests: 8 backend route tests for /revise, 5 frontend Chat tests for the revision UI
 - [ ] Mobile-responsive layout for chat-first home screen
 
 ### 4.2 Cleanup + promote  ✅ (partial — commits on `feature/frontend-ux`)

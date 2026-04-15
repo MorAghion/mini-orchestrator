@@ -91,4 +91,64 @@ describe("Chat", () => {
     rerender(<Chat {...baseProps} sending />);
     expect(screen.getByRole("button", { name: /send/i })).toBeDisabled();
   });
+
+  it("hides the revision CTA when no pendingRevision is set", () => {
+    render(<Chat {...baseProps} onApplyRevision={() => {}} />);
+    expect(screen.queryByText(/Lead suggests a revision/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Apply revision/ })).toBeNull();
+  });
+
+  it("shows the revision CTA when pendingRevision is set", () => {
+    render(
+      <Chat
+        {...baseProps}
+        pendingRevision="add dark mode and propagate to PRD + Frontend"
+        onApplyRevision={() => {}}
+      />,
+    );
+    expect(screen.getByText(/Lead suggests a revision/)).toBeInTheDocument();
+    expect(screen.getByText(/add dark mode and propagate/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Apply revision/ })).toBeInTheDocument();
+  });
+
+  it("fires onApplyRevision with the suggested instruction", () => {
+    const onApply = vi.fn();
+    render(
+      <Chat
+        {...baseProps}
+        pendingRevision="tighten security"
+        onApplyRevision={onApply}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Apply revision/ }));
+    expect(onApply).toHaveBeenCalledWith("tighten security");
+  });
+
+  it("fires onDismissRevision when Skip is clicked", () => {
+    const onDismiss = vi.fn();
+    render(
+      <Chat
+        {...baseProps}
+        pendingRevision="something"
+        onApplyRevision={() => {}}
+        onDismissRevision={onDismiss}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Skip/ }));
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it("disables both revision buttons while applying", () => {
+    render(
+      <Chat
+        {...baseProps}
+        pendingRevision="x"
+        onApplyRevision={() => {}}
+        onDismissRevision={() => {}}
+        applyingRevision
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Applying/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Skip/ })).toBeDisabled();
+  });
 });
