@@ -144,6 +144,12 @@ architectural details live in [plan.md](plan.md).
       collapsed even when later tasks land. Make a wave with at least one
       `running` task always render expanded, regardless of prior toggle —
       user can still collapse `done` waves freely.
+- [ ] **Collapse / group old revision waves.** After 5+ revisions the
+      board grows a long stack of near-identical "User revision wave"
+      cards. Group them under a collapsible "Past revisions (N)" section
+      under the board, keeping only the most recent 1-2 expanded. Each
+      summarized to its instruction so users can find a specific past
+      change quickly.
 - [ ] Demo recording
 - [ ] Blog post (ai-from-scratch chapter 19)
 - [ ] GitHub polish (description, topics, social preview image)

@@ -26,6 +26,7 @@ export interface Wave {
   status: "pending" | "running" | "done" | "failed";
   is_rework: boolean;
   is_revision: boolean;
+  instruction: string | null;
   started_at: string | null;
   completed_at: string | null;
 }

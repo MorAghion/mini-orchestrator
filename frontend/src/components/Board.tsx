@@ -113,8 +113,16 @@ function WaveRow({
           </div>
           {wave.is_revision ? (
             <div className="wave-subtitle">
-              You requested a change — these agents re-ran with your
-              instruction and the Reviewer agent re-checked.
+              {wave.instruction ? (
+                <>
+                  <span className="wave-instruction-label">Your request:</span>{" "}
+                  <span className="wave-instruction">
+                    &ldquo;{wave.instruction}&rdquo;
+                  </span>
+                </>
+              ) : (
+                "You requested a change — these agents re-ran with your instruction and the Reviewer agent re-checked."
+              )}
             </div>
           ) : wave.is_rework ? (
             <div className="wave-subtitle">

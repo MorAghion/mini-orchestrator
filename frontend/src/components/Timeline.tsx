@@ -188,16 +188,23 @@ export function buildTimeline(
           roles?: string[];
           rework?: boolean;
           revision?: boolean;
+          instruction?: string;
         };
         const kind = data.revision ? "Revision wave" : data.rework ? "Rework wave" : `Wave ${data.number}`;
         const cat: Category = data.revision ? "revision" : data.rework ? "rework" : "wave";
         const icon = data.revision ? "✎" : data.rework ? "↻" : "🌊";
+        // For revision waves, prefer the instruction itself over the role
+        // dump — user wants to identify each revision by what they asked for.
+        const tail =
+          data.revision && data.instruction
+            ? `“${truncate(data.instruction, 60)}”`
+            : (data.roles ?? []).join(", ");
         out.push({
           id,
           ts,
           category: cat,
           icon,
-          primary: `${kind} started — ${(data.roles ?? []).join(", ")}`,
+          primary: `${kind} started — ${tail}`,
         });
         break;
       }

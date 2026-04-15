@@ -79,14 +79,15 @@ async def _record_wave(
     roles: list[AgentRole],
     is_rework: bool = False,
     is_revision: bool = False,
+    instruction: str | None = None,
 ) -> str:
     wave_id = f"wave-{uuid.uuid4().hex[:12]}"
     now = datetime.utcnow().isoformat()
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "INSERT INTO waves (id, project_id, number, roles, status, "
-            "is_rework, is_revision, started_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "is_rework, is_revision, instruction, started_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 wave_id,
                 project_id,
@@ -95,6 +96,7 @@ async def _record_wave(
                 WaveStatus.RUNNING.value,
                 1 if is_rework else 0,
                 1 if is_revision else 0,
+                instruction,
                 now,
             ),
         )
@@ -405,7 +407,11 @@ async def run_revision(
     next_number = (row[0] if row else 0) + 1
 
     wave_id = await _record_wave(
-        project_id, next_number, affected_roles, is_revision=True
+        project_id,
+        next_number,
+        affected_roles,
+        is_revision=True,
+        instruction=instruction.strip(),
     )
     await _emit(
         bus, project_id, "wave:started",
@@ -413,6 +419,7 @@ async def run_revision(
         number=next_number,
         roles=[r.value for r in affected_roles],
         revision=True,
+        instruction=instruction.strip(),
     )
 
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
