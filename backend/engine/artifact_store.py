@@ -1,4 +1,8 @@
-"""Artifact store — writes generated docs to disk and mirrors to SQLite.
+"""Artifact store — writes generated docs to disk, mirrors metadata to SQLite.
+
+**Disk is the source of truth** for artifact content. The SQLite `artifacts`
+table is a metadata-only index (role → filename + current version) that lets
+the UI list artifacts cheaply. To read content, always open the file on disk.
 
 Disk layout: <OUTPUT_DIR>/<project_id>/docs/<FILENAME.md>
 """
@@ -51,16 +55,16 @@ async def save_artifact(
         if row:
             artifact_id, version = row[0], row[1] + 1
             await db.execute(
-                "UPDATE artifacts SET content = ?, version = ?, created_at = ? WHERE id = ?",
-                (content, version, now, artifact_id),
+                "UPDATE artifacts SET version = ?, created_at = ? WHERE id = ?",
+                (version, now, artifact_id),
             )
         else:
             artifact_id = f"art-{uuid.uuid4().hex[:12]}"
             version = 1
             await db.execute(
-                "INSERT INTO artifacts (id, project_id, role, filename, content, version, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (artifact_id, project_id, role.value, filename, content, version, now),
+                "INSERT INTO artifacts (id, project_id, role, filename, version, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (artifact_id, project_id, role.value, filename, version, now),
             )
         await db.commit()
 
@@ -69,20 +73,44 @@ async def save_artifact(
         project_id=project_id,
         role=role,
         filename=filename,
-        content=content,
         version=version,
     )
 
 
 async def load_artifacts(project_id: str) -> dict[AgentRole, str]:
-    """Load all artifacts for a project as a role -> content mapping."""
+    """Return all artifacts for a project as a role -> markdown content mapping.
+
+    The DB tells us which roles have artifacts and the current filename; the
+    content itself is read from disk (source of truth).
+    """
     async with aiosqlite.connect(DB_PATH) as db:
         cur = await db.execute(
-            "SELECT role, content FROM artifacts WHERE project_id = ?",
+            "SELECT role, filename FROM artifacts WHERE project_id = ?",
             (project_id,),
         )
         rows = await cur.fetchall()
-    return {AgentRole(role): content for role, content in rows}
+    out: dict[AgentRole, str] = {}
+    for role_value, filename in rows:
+        path = os.path.join(docs_dir(project_id), filename)
+        if not os.path.exists(path):
+            # DB row exists but file is gone — skip. The alternative is to
+            # delete the stale row, but we prefer non-destructive reads.
+            continue
+        with open(path, "r", encoding="utf-8") as f:
+            out[AgentRole(role_value)] = f.read()
+    return out
+
+
+async def read_artifact(project_id: str, filename: str) -> str | None:
+    """Return the markdown body for an artifact, or None if missing.
+
+    Shared helper so routes/agents agree on the read path.
+    """
+    path = os.path.join(docs_dir(project_id), filename)
+    if not os.path.exists(path):
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 async def save_review_report(project_id: str, report: ReviewReport) -> None:

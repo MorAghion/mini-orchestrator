@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
 from backend.config import DB_PATH
-from backend.engine.artifact_store import docs_dir
+from backend.engine.artifact_store import read_artifact
 
 
 router = APIRouter(prefix="/api/projects/{project_id}/artifacts", tags=["artifacts"])
@@ -47,8 +47,7 @@ async def get_artifact(project_id: str, filename: str) -> str:
     safe = os.path.basename(filename)
     if safe != filename or not safe.endswith(".md"):
         raise HTTPException(status_code=400, detail="invalid filename")
-    path = os.path.join(docs_dir(project_id), safe)
-    if not os.path.exists(path):
+    content = await read_artifact(project_id, safe)
+    if content is None:
         raise HTTPException(status_code=404, detail="artifact not found")
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+    return content
