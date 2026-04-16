@@ -595,9 +595,9 @@ button {
   gap: 12px;
   position: sticky;
   top: 16px;
-  align-self: start;                        /* needed for sticky inside a grid */
-  max-height: calc(100vh - 80px);           /* viewport minus header + padding */
-  overflow: hidden;                          /* individual children handle scroll */
+  align-self: start;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;                          /* scroll if children exceed the panel */
 }
 
 .panel {
@@ -642,7 +642,7 @@ button {
   flex-direction: column;
   overflow: hidden;
   flex: 1 1 auto;
-  min-height: 560px;
+  min-height: 300px;          /* flex grows it taller; 300 is the floor */
 }
 
 .chat-header {
