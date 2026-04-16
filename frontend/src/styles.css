@@ -423,6 +423,53 @@ button {
   background: rgba(138, 128, 184, 0.08);
 }
 
+/* -------- Waves section divider (between normal/rework and user revisions) -------- */
+.waves-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 10px 0 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--architecture);
+}
+
+.waves-section-divider:hover .waves-section-label {
+  color: var(--text-primary);
+}
+
+.waves-section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(138, 128, 184, 0.45),
+    transparent
+  );
+}
+
+.waves-section-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--architecture);
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.waves-section-label .toggle-indicator {
+  font-size: 12px;
+  color: inherit;
+}
+
 .wave-header .number {
   font-size: 10px;
   font-weight: 700;
@@ -642,7 +689,7 @@ button {
   flex-direction: column;
   overflow: hidden;
   flex: 1 1 auto;
-  min-height: 300px;          /* flex grows it taller; 300 is the floor */
+  min-height: 450px;          /* flex grows it taller; 450 is the floor */
 }
 
 .chat-header {
