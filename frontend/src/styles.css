@@ -145,21 +145,19 @@ button {
 }
 
 /* -------- layout --------
- * Fixed-viewport shell: the app fills the viewport, the header is
- * fixed-size, and main fills the rest. Each column scrolls internally
- * so the chat composer stays visible while messages scroll, the
- * timeline scrolls within its panel, and the board scrolls if waves
- * exceed the column height.
+ * Free-scrolling page: the board (left) is its natural height, the
+ * page scrolls if waves pile up. The right column (chat + notes +
+ * timeline) is sticky so it stays visible as you scroll through waves.
+ * Chat has generous height with internal message scroll; the composer
+ * stays pinned at the bottom.
  */
 .app {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .app-header {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -182,29 +180,30 @@ button {
 }
 
 .app-main {
-  flex: 1 1 auto;
+  flex: 1;
   display: grid;
-  grid-template-columns: minmax(640px, 1fr) 340px;
-  gap: 16px;
+  grid-template-columns: 3fr 2fr;      /* wider right for chat; left is waves */
+  gap: 20px;
   padding: 16px 24px;
   max-width: 1440px;
   margin: 0 auto;
   width: 100%;
-  min-height: 0;       /* essential for nested overflow to clip */
-  overflow: hidden;
 }
 
 .main-column {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;     /* board scrolls within its column */
+  /* NO overflow/max-height — board is its natural height, page scrolls */
 }
 
 @media (max-width: 980px) {
   .app-main {
     grid-template-columns: 1fr;
+  }
+  .side-panel {
+    position: static;        /* no sticky on single-column */
+    max-height: none;
   }
 }
 
@@ -594,8 +593,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 0;
-  overflow: hidden;
+  position: sticky;
+  top: 16px;
+  align-self: start;                        /* needed for sticky inside a grid */
+  max-height: calc(100vh - 80px);           /* viewport minus header + padding */
+  overflow: hidden;                          /* individual children handle scroll */
 }
 
 .panel {
@@ -629,9 +631,8 @@ button {
 }
 
 /* -------- Chat --------
- * Chat takes roughly half the side-panel; messages scroll within it so
- * the composer stays anchored at the bottom. Pending notes (small) and
- * the timeline (other half) share the remaining space.
+ * Chat fills most of the sticky side-panel; messages scroll inside it
+ * so the composer stays at the bottom. Timeline and notes share the rest.
  */
 .chat {
   background: var(--bg-sprint-row);
@@ -640,8 +641,8 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  flex: 1 1 50%;
-  min-height: 280px;
+  flex: 1 1 auto;           /* grow to fill the sticky panel */
+  min-height: 400px;
 }
 
 .chat-header {
@@ -946,8 +947,9 @@ button {
 .timeline-panel {
   display: flex;
   flex-direction: column;
-  flex: 1 1 50%;
-  min-height: 200px;
+  flex: 0 1 auto;           /* shrinks; doesn't compete with chat for space */
+  min-height: 120px;
+  max-height: 280px;
   overflow: hidden;
 }
 
@@ -988,8 +990,8 @@ button {
   flex-direction: column;
   gap: 2px;
   flex: 1 1 auto;
-  min-height: 0;          /* allow flex item to shrink under content size */
-  overflow-y: auto;
+  min-height: 0;
+  overflow-y: auto;        /* scrolls within its capped panel */
 }
 
 .tl-row {
