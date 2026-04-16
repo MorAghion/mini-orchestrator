@@ -42,9 +42,17 @@ from backend.models.project import (
 async def _emit(
     bus: EventBus | None, project_id: str, event_type: EventType, **data
 ) -> None:
-    if bus is None:
-        return
-    await bus.publish(Event(type=event_type, project_id=project_id, data=data))
+    event = Event(type=event_type, project_id=project_id, data=data)
+    if bus is not None:
+        await bus.publish(event)
+    # Persist so the frontend can replay history on load (not just live SSE).
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO project_events (project_id, type, data, timestamp) "
+            "VALUES (?, ?, ?, ?)",
+            (project_id, event_type, json.dumps(data), event.timestamp.isoformat()),
+        )
+        await db.commit()
 
 
 @dataclass

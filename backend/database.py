@@ -86,10 +86,21 @@ CREATE TABLE IF NOT EXISTS review_issues (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Persisted SSE events so the frontend can replay history on load.
+-- Content is small (type + JSON payload) so storing in SQLite is fine.
+CREATE TABLE IF NOT EXISTS project_events (
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL REFERENCES projects(id),
+    type      TEXT NOT NULL,
+    data      TEXT NOT NULL,   -- JSON object
+    timestamp TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_waves_project ON waves(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON doc_tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_wave ON doc_tasks(wave_id);
 CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_events ON project_events(project_id, id);
 """
 
 

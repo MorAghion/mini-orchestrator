@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { api, DocTask, ProjectStatus, ProjectSummary } from "./api/client";
+import { useEffect, useMemo, useState } from "react";
+import { api, DocTask, OrchestratorEvent, ProjectStatus, ProjectSummary } from "./api/client";
 import { ArtifactViewer } from "./components/ArtifactViewer";
 import { Board } from "./components/Board";
 import { Chat } from "./components/Chat";
@@ -30,6 +30,24 @@ export function App() {
   );
 
   const status: ProjectStatus = data?.project.status ?? "shaping";
+
+  // Merge DB-loaded event history with live SSE events. History gives us
+  // events from before this browser session; sseEvents adds events that
+  // fired after we connected. Deduplicate by timestamp+type in case the
+  // SSE connection was established just as history was loaded.
+  const allEvents = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: OrchestratorEvent[] = [
+      ...(data?.events ?? []),
+      ...events,
+    ];
+    return merged.filter((e) => {
+      const key = `${e.timestamp}|${e.type}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [data?.events, events]);
 
   // When the Lead emits BRIEF_READY the idea gets saved; the next refetch
   // will reflect that. Trigger one now so the UI updates immediately.
@@ -138,9 +156,9 @@ export function App() {
           {status !== "shaping" && (
             <Timeline
               projectId={projectId}
-              events={events}
+              events={allEvents}
               connected={connected}
-              reviewTick={events.length}
+              reviewTick={allEvents.length}
               status={status}
             />
           )}

@@ -288,7 +288,22 @@ async def get_project(project_id: str) -> dict[str, Any]:
             for t in await cur.fetchall()
         ]
 
-    return {"project": project, "waves": waves, "tasks": tasks}
+        cur = await db.execute(
+            "SELECT type, data, timestamp FROM project_events "
+            "WHERE project_id = ? ORDER BY id",
+            (project_id,),
+        )
+        events = [
+            {
+                "type": e[0],
+                "project_id": project_id,
+                "data": json.loads(e[1]),
+                "timestamp": e[2],
+            }
+            for e in await cur.fetchall()
+        ]
+
+    return {"project": project, "waves": waves, "tasks": tasks, "events": events}
 
 
 @router.get("/{project_id}/review")

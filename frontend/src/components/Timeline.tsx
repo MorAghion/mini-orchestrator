@@ -12,8 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { api, ReviewReport } from "../api/client";
-import { OrchestratorEvent } from "../hooks/useEventStream";
+import { api, OrchestratorEvent, ReviewReport } from "../api/client";
 import { ROLE_TITLE } from "../labels";
 
 interface Props {
