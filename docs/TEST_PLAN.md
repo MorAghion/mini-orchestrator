@@ -28,17 +28,25 @@ Simple enough to run fast; complex enough to touch all 8 doc agents (has screens
 8. Click any completed task card to open its artifact
 
 ### Expected
-- [ ] Shaping phase: Lead asks at least one clarifying question, then proposes a brief
-- [ ] Brief accepted: **Launch Stage 1** button appears below chat
-- [ ] After launch: project transitions `shaping → planning → stage1_running`; board shows wave rows
-- [ ] Wave 1 (PRD) completes first; subsequent waves appear in dependency order
-- [ ] No more than 3 task cards show `running` at the same time
-- [ ] All 8 task cards reach `done`
-- [ ] Reviewer row appears briefly (`stage1_review`), then disappears
-- [ ] Project reaches `stage1_done`; board header shows "8/8 agents done"
-- [ ] Clicking a task card opens a modal with rendered markdown — not blank, not raw HTML
-- [ ] Cost indicator in header shows a non-zero API-equivalent amount
-- [ ] Timeline panel shows a chronological event list (wave started/completed, task events, review)
+- [x] Shaping phase: Lead asks at least one clarifying question, then proposes a brief
+- [x] Brief accepted: **Launch Stage 1** button appears below chat
+- [x] After launch: project transitions `shaping → planning → stage1_running`; board shows wave rows
+- [x] Wave 1 (PRD) completes first; subsequent waves appear in dependency order
+- [x] No more than 3 task cards show `running` at the same time
+- [x] All 8 task cards reach `done`
+- [x] Reviewer row appears briefly (`stage1_review`), then disappears
+- [x] Project reaches `stage1_done`; board header shows "8/8 agents done"
+- [x] Clicking a task card opens a modal with rendered markdown — not blank, not raw HTML
+- [x] Cost indicator in header shows a non-zero API-equivalent amount
+- [x] Timeline panel shows a chronological event list (wave started/completed, task events, review)
+- [ ] **[BUG]** Timeline reviewer row — clicking the `▸` chevron expands inline issue list. Currently the row lights up on hover even when the button is disabled (CSS hover applies to the whole row regardless of interactivity). Fix shipped; verify the expand actually works and shows the 6 issues with severity + suggested fix.
+
+### Note — what "approved with N issues" means
+The Reviewer uses two verdicts:
+- **`needs_rework`** — at least one high-severity issue. Triggers an automatic rework wave: flagged agents re-run with the reviewer's feedback injected, then Stage 1 finishes.
+- **`approved`** — only low/medium severity nits; nothing blocks Stage 2. No rework wave fires. Issues are logged (expandable in the Timeline) but do NOT auto-trigger any action.
+
+So 6 issues with "approved" = cosmetic/low-severity suggestions. The Refiner persona is now active — you can ask it to act on any of them if you want, or ignore them and proceed to Stage 2.
 
 ---
 

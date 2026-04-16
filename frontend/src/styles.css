@@ -1072,7 +1072,7 @@ button {
   line-height: 1.4;
 }
 
-.tl-row:hover {
+.tl-row:has(.tl-row-main:not(:disabled)):hover {
   background: var(--bg-card-hover);
 }
 
