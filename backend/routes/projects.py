@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Any
 
 import aiosqlite
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel
 
 from backend.config import DB_PATH
@@ -218,8 +218,8 @@ async def revise_project(
 # Delete
 # ---------------------------------------------------------------------------
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(project_id: str) -> None:
+@router.delete("/{project_id}")
+async def delete_project(project_id: str) -> Response:
     """Hard-delete a project: all DB rows + artifact files on disk."""
     async with aiosqlite.connect(DB_PATH) as db:
         cur = await db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,))
@@ -245,6 +245,8 @@ async def delete_project(project_id: str) -> None:
     artifact_path = project_dir(project_id)
     if os.path.isdir(artifact_path):
         shutil.rmtree(artifact_path)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------
