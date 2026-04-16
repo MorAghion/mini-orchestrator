@@ -337,9 +337,14 @@ async def test_run_revision_records_revision_wave_with_is_revision_flag(
 
     async with aiosqlite.connect(isolated_db) as db:
         cur = await db.execute(
-            "SELECT is_rework, is_revision FROM waves WHERE project_id = ?",
+            "SELECT is_rework, is_revision, instruction FROM waves WHERE project_id = ?",
             (project_id,),
         )
         rows = await cur.fetchall()
 
-    assert rows == [(0, 1)]
+    assert len(rows) == 1
+    is_rework, is_revision, instruction = rows[0]
+    assert is_rework == 0
+    assert is_revision == 1
+    # instruction must be persisted — this is what the Board displays per revision wave
+    assert instruction == "add dark mode"
