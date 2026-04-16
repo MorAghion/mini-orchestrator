@@ -4,8 +4,8 @@ Living TODO. `[x]` = done and merged to `master` (or later). `[ ]` = pending.
 This file is the quick-reference snapshot across phases. The deep
 architectural details live in [plan.md](plan.md).
 
-**Last updated:** 2026-04-15
-**Current phase:** 4.1 — Conversational Lead + right-panel redesign
+**Last updated:** 2026-04-16
+**Current phase:** 4.2 — Design docs + cleanup
 
 ---
 
@@ -175,11 +175,3 @@ architectural details live in [plan.md](plan.md).
 - Commit TODO changes together with the code they reference, so the diff tells the story.
 
 
----
-
-## Open question that pops - DO NOT DELETE:
-1. can we add a feature that takes under consideration the user's subscription + project scope in order to determine the max number of agents working simultanuesly? this action could take place in the "bridge" part
-
-2. which of the docs generated is responsible of the user's app-level architecture. for example, if the user has several screens in which they have an "edit mode" - the app can have 1 single edit mode component used by every screen. Where do we define these kinds of structures?
-
-3. is there only 1 source of truth for the docs? meaning - first wave PRD and revision wave PRD will show the same text?

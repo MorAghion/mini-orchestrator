@@ -193,11 +193,22 @@ async def revise_project(
         if not roles:
             raise HTTPException(status_code=400, detail="affected_roles cannot be empty")
 
+    # Transition to stage1_running BEFORE spawning the background task so that
+    # a second /revise arriving before the task runs still sees a non-done
+    # status and is rejected. The background task restores stage1_done when it
+    # finishes (success or failure).
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE projects SET status = ?, updated_at = ? WHERE id = ?",
+            (ProjectStatus.STAGE1_RUNNING.value, datetime.utcnow().isoformat(), project_id),
+        )
+        await db.commit()
+
     bus = request.app.state.event_bus
     asyncio.create_task(run_revision(project_id, instruction, roles, bus=bus))
     return {
         "project_id": project_id,
-        "status": project_status,
+        "status": ProjectStatus.STAGE1_RUNNING.value,
         "affected_roles": [r.value for r in roles],
     }
 

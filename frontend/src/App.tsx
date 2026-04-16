@@ -32,6 +32,14 @@ export function App() {
 
   const status: ProjectStatus = data?.project.status ?? "shaping";
 
+  // If the project transitions into stage1_running (revision started) while a
+  // pendingRevision CTA is still visible, clear it — the revision is underway.
+  useEffect(() => {
+    if (status === "stage1_running") {
+      setPendingRevision(null);
+    }
+  }, [status]);
+
   // Merge DB-loaded event history with live SSE events. History gives us
   // events from before this browser session; sseEvents adds events that
   // fired after we connected. Deduplicate by timestamp+type in case the
