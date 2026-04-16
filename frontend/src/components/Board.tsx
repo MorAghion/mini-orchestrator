@@ -18,6 +18,10 @@ export function Board({ detail, onTaskClick }: Props) {
   const tasksByWave = groupBy(tasks, (t) => t.wave_id);
   const doneCount = tasks.filter((t) => t.status === "done").length;
 
+  const normalWaves = waves.filter((w) => !w.is_revision);
+  const revisionWaves = waves.filter((w) => w.is_revision);
+  const [revisionsExpanded, setRevisionsExpanded] = useState(true);
+
   return (
     <div className="board">
       <div className="board-header">
@@ -40,7 +44,7 @@ export function Board({ detail, onTaskClick }: Props) {
         </div>
       )}
 
-      {waves.map((wave) => (
+      {normalWaves.map((wave) => (
         <WaveRow
           key={wave.id}
           wave={wave}
@@ -48,6 +52,33 @@ export function Board({ detail, onTaskClick }: Props) {
           onTaskClick={onTaskClick}
         />
       ))}
+
+      {revisionWaves.length > 0 && (
+        <>
+          <button
+            className="waves-section-divider"
+            onClick={() => setRevisionsExpanded((x) => !x)}
+            aria-expanded={revisionsExpanded}
+          >
+            <span className="waves-section-line" />
+            <span className="waves-section-label">
+              <span className="toggle-indicator">{revisionsExpanded ? "▾" : "▸"}</span>
+              User revisions ({revisionWaves.length})
+            </span>
+            <span className="waves-section-line" />
+          </button>
+
+          {revisionsExpanded &&
+            revisionWaves.map((wave) => (
+              <WaveRow
+                key={wave.id}
+                wave={wave}
+                tasks={tasksByWave.get(wave.id) ?? []}
+                onTaskClick={onTaskClick}
+              />
+            ))}
+        </>
+      )}
     </div>
   );
 }
