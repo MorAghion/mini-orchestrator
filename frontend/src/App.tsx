@@ -15,6 +15,7 @@ import { PROJECT_STATUS_LABEL, phaseLabelFor } from "./labels";
 
 export function App() {
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [listKey, setListKey] = useState(0);
   const [openTask, setOpenTask] = useState<DocTask | null>(null);
   const [stage, setStage] = useState<Stage>("documents");
   const [launching, setLaunching] = useState(false);
@@ -94,7 +95,7 @@ export function App() {
     return (
       <div className="app">
         <Header />
-        <ProjectList onPick={setProjectId} onCreate={setProjectId} />
+        <ProjectList key={listKey} onPick={setProjectId} onCreate={setProjectId} />
       </div>
     );
   }
@@ -113,6 +114,7 @@ export function App() {
               onClick={() => {
                 setProjectId(null);
                 setOpenTask(null);
+                setListKey((k) => k + 1);
               }}
             >
               ← Back
