@@ -150,6 +150,12 @@ architectural details live in [plan.md](plan.md).
       under the board, keeping only the most recent 1-2 expanded. Each
       summarized to its instruction so users can find a specific past
       change quickly.
+- [ ] **Review report modal.** Currently the Reviewer's issues are expandable
+      inline in the Timeline (click `▸` on the "Reviewer agent: approved — N issues" row).
+      Replace or augment with a dedicated modal: larger reading surface,
+      filterable by severity, each issue shows affected doc with a direct
+      "Open artifact" link. Trigger: click the reviewer row in the Timeline
+      OR a "View review" button in the board header when `stage1_done`.
 - [ ] Demo recording
 - [ ] Blog post (ai-from-scratch chapter 19)
 - [ ] GitHub polish (description, topics, social preview image)
