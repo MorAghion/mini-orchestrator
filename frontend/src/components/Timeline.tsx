@@ -23,19 +23,31 @@ interface Props {
   /** Bumped by the parent on every event tick; we use it to refetch the
    * review report when a new review event lands. */
   reviewTick: number;
+  /** Current project status — used to skip the review fetch when no report
+   * exists yet (avoids a spurious 404 during stage1_running / stage1_review).
+   * Defaults to "" (unknown) — safe: review will only be fetched once a review
+   * SSE event has been seen. */
+  status?: string;
 }
 
-export function Timeline({ projectId, events, connected, reviewTick }: Props) {
+export function Timeline({ projectId, events, connected, reviewTick, status = "" }: Props) {
   const [report, setReport] = useState<ReviewReport | null>(null);
 
-  // Refetch the review report whenever a review event fires (or initially).
+  // Only fetch the review report when one is known to exist: either the
+  // project has finished Stage 1 (review_report.json is on disk), or a
+  // review SSE event has arrived in this session (covers mid-run rework cycles).
+  // Skipping it during stage1_running / stage1_review avoids a spurious 404.
+  const hasSeenReview = events.some((e) => e.type.startsWith("review:"));
+  const reviewExists = status === "stage1_done" || hasSeenReview;
+
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !reviewExists) return;
     api
       .getReview(projectId)
       .then(setReport)
-      .catch(() => setReport(null)); // 404 = not yet available; ignore
-  }, [projectId, reviewTick]);
+      .catch(() => setReport(null));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, reviewTick, reviewExists]);
 
   const entries = buildTimeline(events, report);
 

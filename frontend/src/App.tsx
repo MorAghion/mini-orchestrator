@@ -141,6 +141,7 @@ export function App() {
               events={events}
               connected={connected}
               reviewTick={events.length}
+              status={status}
             />
           )}
         </div>
