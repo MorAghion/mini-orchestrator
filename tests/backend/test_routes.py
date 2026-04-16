@@ -243,6 +243,10 @@ async def test_revise_uses_default_role_set(client, no_real_engine_calls):
     # The route uses asyncio.create_task → yield once so the noop runs.
     await asyncio.sleep(0)
     assert len(no_real_engine_calls["run_revision"]) == 1
+    # Verify the instruction is forwarded verbatim to run_revision — this is
+    # what ends up stored in the wave row and shown in the Board per revision.
+    captured_args, _ = no_real_engine_calls["run_revision"][0]
+    assert captured_args[1] == "add dark mode"  # positional: (project_id, instruction, roles)
 
 
 async def test_revise_accepts_explicit_role_list(client, no_real_engine_calls):
