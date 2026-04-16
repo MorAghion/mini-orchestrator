@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 import uuid
 from datetime import datetime
 from typing import Any
@@ -211,6 +212,39 @@ async def revise_project(
         "status": ProjectStatus.STAGE1_RUNNING.value,
         "affected_roles": [r.value for r in roles],
     }
+
+
+# ---------------------------------------------------------------------------
+# Delete
+# ---------------------------------------------------------------------------
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_project(project_id: str) -> None:
+    """Hard-delete a project: all DB rows + artifact files on disk."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,))
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="project not found")
+
+        # Delete all dependent rows before the project row (no FK cascade).
+        for table in (
+            "review_issues",
+            "project_events",
+            "lead_messages",
+            "notes_queue",
+            "artifacts",
+            "doc_tasks",
+            "waves",
+            "projects",
+        ):
+            await db.execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
+        await db.commit()
+
+    # Remove artifact files from disk.
+    artifact_path = project_dir(project_id)
+    if os.path.isdir(artifact_path):
+        shutil.rmtree(artifact_path)
 
 
 # ---------------------------------------------------------------------------

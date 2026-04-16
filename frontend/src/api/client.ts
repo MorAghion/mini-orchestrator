@@ -144,6 +144,7 @@ export const api = {
       "/api/projects",
       idea ? { idea } : {},
     ),
+  deleteProject: (id: string) => del(`/api/projects/${id}`),
   launchProject: (id: string, idea?: string) =>
     post<{ project_id: string; status: string }, { idea?: string }>(
       `/api/projects/${id}/launch`,

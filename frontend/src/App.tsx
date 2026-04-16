@@ -292,6 +292,7 @@ function ProjectList({
 }) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     api.listProjects().then(setProjects);
@@ -304,6 +305,18 @@ function ProjectList({
       onCreate(project_id);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this project? This cannot be undone.")) return;
+    setDeleting(id);
+    try {
+      await api.deleteProject(id);
+      setProjects((prev) => prev?.filter((p) => p.id !== id) ?? prev);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -331,26 +344,42 @@ function ProjectList({
         {projects?.map((p) => {
           const title = p.idea?.trim() || "(untitled — brief not yet set)";
           return (
-            <button
-              key={p.id}
-              className="btn"
-              onClick={() => onPick(p.id)}
-              style={{ textAlign: "left" }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 500 }}>
-                {title.length > 90 ? title.slice(0, 89) + "…" : title}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-                {phaseLabelFor(p.status)} ·{" "}
-                {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
-                <span
-                  title={`You paid $0 under Max. Equivalent API cost: ~$${(p.cost_cents / 100).toFixed(2)}`}
-                >
-                  $0 paid
-                </span>{" "}
-                · {new Date(p.updated_at).toLocaleString()}
-              </div>
-            </button>
+            <div key={p.id} style={{ display: "flex", gap: 6, alignItems: "stretch" }}>
+              <button
+                className="btn"
+                onClick={() => onPick(p.id)}
+                style={{ textAlign: "left", flex: 1 }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 500 }}>
+                  {title.length > 90 ? title.slice(0, 89) + "…" : title}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                  {phaseLabelFor(p.status)} ·{" "}
+                  {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
+                  <span
+                    title={`You paid $0 under Max. Equivalent API cost: ~$${(p.cost_cents / 100).toFixed(2)}`}
+                  >
+                    $0 paid
+                  </span>{" "}
+                  · {new Date(p.updated_at).toLocaleString()}
+                </div>
+              </button>
+              <button
+                className="btn"
+                onClick={(e) => handleDelete(e, p.id)}
+                disabled={deleting === p.id}
+                title="Delete project"
+                style={{
+                  padding: "0 10px",
+                  color: "var(--text-muted)",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                {deleting === p.id ? "…" : "×"}
+              </button>
+            </div>
           );
         })}
       </div>
