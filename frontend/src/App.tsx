@@ -293,16 +293,22 @@ function ProjectList({
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.listProjects().then(setProjects);
+    api.listProjects().then(setProjects).catch(() => {
+      setError("Cannot reach the backend. Is uvicorn running on port 8000?");
+    });
   }, []);
 
   const handleNew = async () => {
     setCreating(true);
+    setError(null);
     try {
       const { project_id } = await api.createProject();
       onCreate(project_id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create project — is the backend running?");
     } finally {
       setCreating(false);
     }
@@ -332,6 +338,11 @@ function ProjectList({
           {creating ? "Creating…" : "+ Start new project"}
         </button>
       </div>
+      {error && (
+        <div style={{ color: "var(--type-security-fg)", fontSize: 12, marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {projects === null && (
           <div style={{ color: "var(--text-muted)" }}>Loading…</div>
