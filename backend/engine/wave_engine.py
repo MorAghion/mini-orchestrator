@@ -25,11 +25,12 @@ from backend.engine.artifact_store import (
     save_artifact,
     save_review_report,
 )
-from backend.engine.chat_store import absorb_pending_notes
+from backend.engine.chat_store import absorb_pending_notes, append_message
 from backend.engine.event_bus import EventBus
 from backend.models.events import Event, EventType
 from backend.models.project import (
     AgentRole,
+    ChatRole,
     Project,
     ProjectStatus,
     ReviewReport,
@@ -37,6 +38,46 @@ from backend.models.project import (
     WavePlan,
     WaveStatus,
 )
+
+
+def _review_summary_message(report: ReviewReport, reworked: list[AgentRole]) -> str:
+    """Compose the Lead's post-Stage-1 message summarising the Reviewer's findings."""
+    lines: list[str] = []
+
+    if reworked:
+        lines.append(
+            f"All 8 docs are in. The Reviewer flagged issues on the first pass and I ran "
+            f"a rework on {len(reworked)} doc(s) to address them."
+        )
+    else:
+        lines.append("All 8 docs are in — the Reviewer has finished its pass.")
+
+    if not report.issues:
+        lines.append(
+            "\nVerdict: **approved** — no issues found. "
+            "Take a look at the board and let me know if anything needs changing."
+        )
+        return "\n".join(lines)
+
+    verdict_label = "approved" if report.overall_verdict == "approved" else "needs attention"
+    lines.append(f"\nVerdict: **{verdict_label}** — {len(report.issues)} issue(s) noted:")
+
+    for sev in ("high", "medium", "low"):
+        bucket = [i for i in report.issues if i.severity == sev]
+        if not bucket:
+            continue
+        lines.append(f"\n**{sev.capitalize()} severity**")
+        for issue in bucket:
+            affects = ", ".join(issue.affected_artifacts) if issue.affected_artifacts else "—"
+            lines.append(f"- [{issue.category}] {issue.description}")
+            lines.append(f"  → Fix: {issue.suggested_fix}")
+            lines.append(f"  → Affects: {affects}")
+
+    lines.append(
+        "\nWould you like me to address any of these? "
+        "Just tell me which ones matter to you and I'll revise the relevant docs."
+    )
+    return "\n".join(lines)
 
 
 async def _emit(
@@ -354,6 +395,13 @@ async def run_stage1(
             total_artifacts=len(artifacts),
         )
 
+        # Post the Lead's completion summary to the chat so the user sees
+        # the review verdict + issue list without having to ask.
+        await append_message(
+            project.id, ChatRole.LEAD,
+            _review_summary_message(report, reworked),
+        )
+
         return Stage1Result(
             project=project,
             wave_plan=plan,
@@ -484,6 +532,10 @@ async def run_revision(
                 "review:approved" if report.overall_verdict == "approved" else "review:needs_rework",
                 issue_count=len(report.issues),
                 summary=report.summary,
+            )
+            await append_message(
+                project_id, ChatRole.LEAD,
+                _review_summary_message(report, []),
             )
 
         return updated
