@@ -2,6 +2,13 @@
  * Calls are same-origin via the Vite dev proxy (/api -> http://localhost:8000).
  */
 
+export interface OrchestratorEvent {
+  type: string;
+  project_id: string;
+  data: Record<string, unknown>;
+  timestamp: string;
+}
+
 export type ProjectStatus =
   | "shaping"
   | "planning"
@@ -46,6 +53,10 @@ export interface ProjectDetail {
   project: ProjectSummary & { output_dir: string };
   waves: Wave[];
   tasks: DocTask[];
+  /** Full event history loaded from DB — used to populate the Timeline on
+   * initial load so history survives page refreshes. Live SSE events are
+   * merged on top of this in App.tsx. */
+  events: OrchestratorEvent[];
 }
 
 export interface ArtifactMeta {
@@ -133,6 +144,7 @@ export const api = {
       "/api/projects",
       idea ? { idea } : {},
     ),
+  deleteProject: (id: string) => del(`/api/projects/${id}`),
   launchProject: (id: string, idea?: string) =>
     post<{ project_id: string; status: string }, { idea?: string }>(
       `/api/projects/${id}/launch`,

@@ -53,6 +53,24 @@ export function Board({ detail, onTaskClick }: Props) {
         />
       ))}
 
+      {project.status === "stage1_review" && (
+        <div className="wave running reviewer-row">
+          <div className="wave-header" style={{ cursor: "default" }}>
+            <span className="toggle-indicator" aria-hidden>👁</span>
+            <div className="wave-title">
+              <div className="wave-title-row">
+                <span className="number">Reviewer</span>
+                <span className="wave-roles">Consistency check</span>
+              </div>
+              <div className="wave-subtitle">
+                Checking all docs for cross-document consistency…
+              </div>
+            </div>
+            <span className="status running">running</span>
+          </div>
+        </div>
+      )}
+
       {revisionWaves.length > 0 && (
         <>
           <button

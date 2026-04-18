@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { api, DocTask, ProjectStatus, ProjectSummary } from "./api/client";
+import { useEffect, useMemo, useState } from "react";
+import { api, DocTask, OrchestratorEvent, ProjectStatus, ProjectSummary } from "./api/client";
 import { ArtifactViewer } from "./components/ArtifactViewer";
 import { Board } from "./components/Board";
 import { Chat } from "./components/Chat";
@@ -15,6 +15,7 @@ import { PROJECT_STATUS_LABEL, phaseLabelFor } from "./labels";
 
 export function App() {
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [listKey, setListKey] = useState(0);
   const [openTask, setOpenTask] = useState<DocTask | null>(null);
   const [stage, setStage] = useState<Stage>("documents");
   const [launching, setLaunching] = useState(false);
@@ -30,6 +31,32 @@ export function App() {
   );
 
   const status: ProjectStatus = data?.project.status ?? "shaping";
+
+  // If the project transitions into stage1_running (revision started) while a
+  // pendingRevision CTA is still visible, clear it — the revision is underway.
+  useEffect(() => {
+    if (status === "stage1_running") {
+      setPendingRevision(null);
+    }
+  }, [status]);
+
+  // Merge DB-loaded event history with live SSE events. History gives us
+  // events from before this browser session; sseEvents adds events that
+  // fired after we connected. Deduplicate by timestamp+type in case the
+  // SSE connection was established just as history was loaded.
+  const allEvents = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: OrchestratorEvent[] = [
+      ...(data?.events ?? []),
+      ...events,
+    ];
+    return merged.filter((e) => {
+      const key = `${e.timestamp}|${e.type}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [data?.events, events]);
 
   // When the Lead emits BRIEF_READY the idea gets saved; the next refetch
   // will reflect that. Trigger one now so the UI updates immediately.
@@ -76,7 +103,7 @@ export function App() {
     return (
       <div className="app">
         <Header />
-        <ProjectList onPick={setProjectId} onCreate={setProjectId} />
+        <ProjectList key={listKey} onPick={setProjectId} onCreate={setProjectId} />
       </div>
     );
   }
@@ -95,6 +122,7 @@ export function App() {
               onClick={() => {
                 setProjectId(null);
                 setOpenTask(null);
+                setListKey((k) => k + 1);
               }}
             >
               ← Back
@@ -138,9 +166,10 @@ export function App() {
           {status !== "shaping" && (
             <Timeline
               projectId={projectId}
-              events={events}
+              events={allEvents}
               connected={connected}
-              reviewTick={events.length}
+              reviewTick={allEvents.length}
+              status={status}
             />
           )}
         </div>
@@ -263,18 +292,37 @@ function ProjectList({
 }) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.listProjects().then(setProjects);
+    api.listProjects().then(setProjects).catch(() => {
+      setError("Cannot reach the backend. Is uvicorn running on port 8000?");
+    });
   }, []);
 
   const handleNew = async () => {
     setCreating(true);
+    setError(null);
     try {
       const { project_id } = await api.createProject();
       onCreate(project_id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create project — is the backend running?");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this project? This cannot be undone.")) return;
+    setDeleting(id);
+    try {
+      await api.deleteProject(id);
+      setProjects((prev) => prev?.filter((p) => p.id !== id) ?? prev);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -290,6 +338,11 @@ function ProjectList({
           {creating ? "Creating…" : "+ Start new project"}
         </button>
       </div>
+      {error && (
+        <div style={{ color: "var(--type-security-fg)", fontSize: 12, marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {projects === null && (
           <div style={{ color: "var(--text-muted)" }}>Loading…</div>
@@ -302,26 +355,42 @@ function ProjectList({
         {projects?.map((p) => {
           const title = p.idea?.trim() || "(untitled — brief not yet set)";
           return (
-            <button
-              key={p.id}
-              className="btn"
-              onClick={() => onPick(p.id)}
-              style={{ textAlign: "left" }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 500 }}>
-                {title.length > 90 ? title.slice(0, 89) + "…" : title}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-                {phaseLabelFor(p.status)} ·{" "}
-                {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
-                <span
-                  title={`You paid $0 under Max. Equivalent API cost: ~$${(p.cost_cents / 100).toFixed(2)}`}
-                >
-                  $0 paid
-                </span>{" "}
-                · {new Date(p.updated_at).toLocaleString()}
-              </div>
-            </button>
+            <div key={p.id} style={{ display: "flex", gap: 6, alignItems: "stretch" }}>
+              <button
+                className="btn"
+                onClick={() => onPick(p.id)}
+                style={{ textAlign: "left", flex: 1 }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 500 }}>
+                  {title.length > 90 ? title.slice(0, 89) + "…" : title}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                  {phaseLabelFor(p.status)} ·{" "}
+                  {PROJECT_STATUS_LABEL[p.status] ?? p.status} ·{" "}
+                  <span
+                    title={`You paid $0 under Max. Equivalent API cost: ~$${(p.cost_cents / 100).toFixed(2)}`}
+                  >
+                    $0 paid
+                  </span>{" "}
+                  · {new Date(p.updated_at).toLocaleString()}
+                </div>
+              </button>
+              <button
+                className="btn"
+                onClick={(e) => handleDelete(e, p.id)}
+                disabled={deleting === p.id}
+                title="Delete project"
+                style={{
+                  padding: "0 10px",
+                  color: "var(--text-muted)",
+                  fontSize: 16,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                {deleting === p.id ? "…" : "×"}
+              </button>
+            </div>
           );
         })}
       </div>

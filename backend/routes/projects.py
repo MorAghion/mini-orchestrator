@@ -13,12 +13,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 import uuid
 from datetime import datetime
 from typing import Any
 
 import aiosqlite
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel
 
 from backend.config import DB_PATH
@@ -193,13 +194,59 @@ async def revise_project(
         if not roles:
             raise HTTPException(status_code=400, detail="affected_roles cannot be empty")
 
+    # Transition to stage1_running BEFORE spawning the background task so that
+    # a second /revise arriving before the task runs still sees a non-done
+    # status and is rejected. The background task restores stage1_done when it
+    # finishes (success or failure).
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE projects SET status = ?, updated_at = ? WHERE id = ?",
+            (ProjectStatus.STAGE1_RUNNING.value, datetime.utcnow().isoformat(), project_id),
+        )
+        await db.commit()
+
     bus = request.app.state.event_bus
     asyncio.create_task(run_revision(project_id, instruction, roles, bus=bus))
     return {
         "project_id": project_id,
-        "status": project_status,
+        "status": ProjectStatus.STAGE1_RUNNING.value,
         "affected_roles": [r.value for r in roles],
     }
+
+
+# ---------------------------------------------------------------------------
+# Delete
+# ---------------------------------------------------------------------------
+
+@router.delete("/{project_id}")
+async def delete_project(project_id: str) -> Response:
+    """Hard-delete a project: all DB rows + artifact files on disk."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,))
+        row = await cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="project not found")
+
+        # Delete all dependent rows before the project row (no FK cascade).
+        for table in (
+            "review_issues",
+            "project_events",
+            "lead_messages",
+            "notes_queue",
+            "artifacts",
+            "doc_tasks",
+            "waves",
+            "projects",
+        ):
+            await db.execute(f"DELETE FROM {table} WHERE project_id = ?", (project_id,))
+        await db.commit()
+
+    # Remove artifact files from disk.
+    artifact_path = project_dir(project_id)
+    if os.path.isdir(artifact_path):
+        shutil.rmtree(artifact_path)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +335,22 @@ async def get_project(project_id: str) -> dict[str, Any]:
             for t in await cur.fetchall()
         ]
 
-    return {"project": project, "waves": waves, "tasks": tasks}
+        cur = await db.execute(
+            "SELECT type, data, timestamp FROM project_events "
+            "WHERE project_id = ? ORDER BY id",
+            (project_id,),
+        )
+        events = [
+            {
+                "type": e[0],
+                "project_id": project_id,
+                "data": json.loads(e[1]),
+                "timestamp": e[2],
+            }
+            for e in await cur.fetchall()
+        ]
+
+    return {"project": project, "waves": waves, "tasks": tasks, "events": events}
 
 
 @router.get("/{project_id}/review")

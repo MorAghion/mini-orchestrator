@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from typing import Any
 
 from backend.config import AGENT_MODEL
@@ -58,16 +59,26 @@ class BaseAgent:
         ]
 
     async def _run(self, cmd: list[str]) -> dict[str, Any]:
+        # Strip ANTHROPIC_API_KEY so the CLI always uses the Max subscription.
+        # If a key is set in the shell profile or .env it would make the CLI
+        # try API auth instead of the logged-in Max account and fail.
+        env = os.environ.copy()
+        env.pop("ANTHROPIC_API_KEY", None)
         proc = await asyncio.create_subprocess_exec(
             *cmd,
+            stdin=asyncio.subprocess.DEVNULL,  # prevent any interactive prompts
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
+            out_head = stdout.decode(errors="replace")[:300]
+            err_head = stderr.decode(errors="replace")[:300]
             raise CLIError(
-                f"{self.name}: claude exited {proc.returncode}: "
-                f"{stderr.decode(errors='replace')[:500]}"
+                f"{self.name}: claude exited {proc.returncode}\n"
+                f"  stderr: {err_head or '(empty)'}\n"
+                f"  stdout: {out_head or '(empty)'}"
             )
         try:
             envelope = json.loads(stdout.decode())

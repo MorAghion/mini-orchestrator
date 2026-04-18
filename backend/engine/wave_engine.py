@@ -42,9 +42,17 @@ from backend.models.project import (
 async def _emit(
     bus: EventBus | None, project_id: str, event_type: EventType, **data
 ) -> None:
-    if bus is None:
-        return
-    await bus.publish(Event(type=event_type, project_id=project_id, data=data))
+    event = Event(type=event_type, project_id=project_id, data=data)
+    if bus is not None:
+        await bus.publish(event)
+    # Persist so the frontend can replay history on load (not just live SSE).
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO project_events (project_id, type, data, timestamp) "
+            "VALUES (?, ?, ?, ?)",
+            (project_id, event_type, json.dumps(data), event.timestamp.isoformat()),
+        )
+        await db.commit()
 
 
 @dataclass
@@ -375,7 +383,9 @@ async def run_revision(
     Mechanically very close to the auto-rework cycle in `run_stage1`, but:
     - triggered by user via /revise (not Reviewer's needs_rework verdict)
     - the wave is recorded with `is_revision=True` (not is_rework)
-    - the project must already be in `stage1_done`; status doesn't change
+    - the project must already be in `stage1_done`; the /revise endpoint
+      transitions it to `stage1_running` before calling this; this function
+      always restores `stage1_done` in its finally block
 
     Returns the updated artifacts for the affected roles. The Reviewer's
     new verdict can be fetched via the existing review endpoint.
@@ -406,73 +416,110 @@ async def run_revision(
         row = await cur.fetchone()
     next_number = (row[0] if row else 0) + 1
 
-    wave_id = await _record_wave(
-        project_id,
-        next_number,
-        affected_roles,
-        is_revision=True,
-        instruction=instruction.strip(),
-    )
-    await _emit(
-        bus, project_id, "wave:started",
-        wave_id=wave_id,
-        number=next_number,
-        roles=[r.value for r in affected_roles],
-        revision=True,
-        instruction=instruction.strip(),
-    )
-
-    semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
-    feedback = f"User-requested revision:\n\n{instruction.strip()}"
-    if leftover_notes:
-        feedback += "\n\nAlso incorporate these pending user notes:\n" + "\n".join(
-            f"- {n.content}" for n in leftover_notes
+    try:
+        wave_id = await _record_wave(
+            project_id,
+            next_number,
+            affected_roles,
+            is_revision=True,
+            instruction=instruction.strip(),
         )
-
-    results = await asyncio.gather(
-        *[
-            _run_worker(
-                project_id,
-                wave_id,
-                role,
-                idea,
-                dict(artifacts),
-                feedback,
-                semaphore,
-                bus,
-            )
-            for role in affected_roles
-        ]
-    )
-
-    updated: dict[AgentRole, str] = {}
-    wave_failed = False
-    for role, content, err in results:
-        if err or content is None:
-            wave_failed = True
-            continue
-        artifacts[role] = content
-        updated[role] = content
-
-    await _complete_wave(
-        wave_id, WaveStatus.FAILED if wave_failed else WaveStatus.DONE
-    )
-    await _emit(
-        bus, project_id, "wave:completed",
-        wave_id=wave_id,
-        status=(WaveStatus.FAILED if wave_failed else WaveStatus.DONE).value,
-    )
-
-    if not wave_failed:
-        # Re-run the Reviewer over the new artifact set and persist its verdict.
-        reviewer = ReviewerAgent()
-        report = await reviewer.review(idea, artifacts)
-        await save_review_report(project_id, report)
         await _emit(
-            bus, project_id,
-            "review:approved" if report.overall_verdict == "approved" else "review:needs_rework",
-            issue_count=len(report.issues),
-            summary=report.summary,
+            bus, project_id, "wave:started",
+            wave_id=wave_id,
+            number=next_number,
+            roles=[r.value for r in affected_roles],
+            revision=True,
+            instruction=instruction.strip(),
         )
 
-    return updated
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_AGENTS)
+        feedback = f"User-requested revision:\n\n{instruction.strip()}"
+        if leftover_notes:
+            feedback += "\n\nAlso incorporate these pending user notes:\n" + "\n".join(
+                f"- {n.content}" for n in leftover_notes
+            )
+
+        results = await asyncio.gather(
+            *[
+                _run_worker(
+                    project_id,
+                    wave_id,
+                    role,
+                    idea,
+                    dict(artifacts),
+                    feedback,
+                    semaphore,
+                    bus,
+                )
+                for role in affected_roles
+            ]
+        )
+
+        updated: dict[AgentRole, str] = {}
+        wave_failed = False
+        for role, content, err in results:
+            if err or content is None:
+                wave_failed = True
+                continue
+            artifacts[role] = content
+            updated[role] = content
+
+        await _complete_wave(
+            wave_id, WaveStatus.FAILED if wave_failed else WaveStatus.DONE
+        )
+        await _emit(
+            bus, project_id, "wave:completed",
+            wave_id=wave_id,
+            status=(WaveStatus.FAILED if wave_failed else WaveStatus.DONE).value,
+        )
+
+        if not wave_failed:
+            # Absorb any notes the user dropped *during* the revision wave —
+            # they arrived after the absorb call at the top of this function,
+            # so the chip should still disappear when the Reviewer runs.
+            await absorb_pending_notes(project_id)
+
+            # Transition to stage1_review so the board shows the Reviewer is active.
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute(
+                    "UPDATE projects SET status = ?, updated_at = ? WHERE id = ?",
+                    (ProjectStatus.STAGE1_REVIEW.value, datetime.utcnow().isoformat(), project_id),
+                )
+                await db.commit()
+
+            # Re-run the Reviewer over the new artifact set and persist its verdict.
+            reviewer = ReviewerAgent()
+            report = await reviewer.review(idea, artifacts)
+            await save_review_report(project_id, report)
+            await _emit(
+                bus, project_id,
+                "review:approved" if report.overall_verdict == "approved" else "review:needs_rework",
+                issue_count=len(report.issues),
+                summary=report.summary,
+            )
+
+            # Mark stage1_done *before* emitting project:completed so the
+            # frontend's refetch (triggered by the event) sees the new status.
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute(
+                    "UPDATE projects SET status = ?, updated_at = ? WHERE id = ?",
+                    (ProjectStatus.STAGE1_DONE.value, datetime.utcnow().isoformat(), project_id),
+                )
+                await db.commit()
+            await _emit(
+                bus, project_id, "project:completed",
+                reworked_roles=[],
+                total_artifacts=len(artifacts),
+            )
+
+        return updated
+    finally:
+        # Safety net: always restore to stage1_done even if an exception
+        # occurred mid-revision (wave failed, Reviewer threw, etc.).
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "UPDATE projects SET status = ?, updated_at = ? WHERE id = ?",
+                (ProjectStatus.STAGE1_DONE.value, datetime.utcnow().isoformat(), project_id),
+            )
+            await db.commit()

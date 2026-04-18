@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
+import { OrchestratorEvent } from "../api/client";
 
-export interface OrchestratorEvent {
-  type: string;
-  project_id: string;
-  data: Record<string, unknown>;
-  timestamp: string;
-}
+export type { OrchestratorEvent };
 
 /** Subscribes to the backend's per-project SSE stream. */
 export function useEventStream(projectId: string | null) {
