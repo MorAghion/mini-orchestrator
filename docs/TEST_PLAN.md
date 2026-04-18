@@ -62,11 +62,11 @@ _Continue from the same project after Scenario 1 completes._
 4. After it completes, check the PRD and FRONTEND artifacts.
 
 ### Expected (Revision A)
-- [ ] Lead replies in Refiner persona (no "Launch" button, no narration style)
-- [ ] A revision suggestion CTA appears ("Apply" + "Skip" buttons)
-- [ ] Clicking Apply: project transitions to `stage1_running`; Apply CTA disappears
-- [ ] A new "User revision wave" row appears on the board with `✎ User revision` badge
-- [ ] Wave shows only the affected roles (not all 8)
+- [x] Lead replies in Refiner persona (no "Launch" button, no narration style)
+- [x] A revision suggestion CTA appears ("Apply" + "Skip" buttons)
+- [x] Clicking Apply: project transitions to `stage1_running`; Apply CTA disappears
+- [x] A new "User revision wave" row appears on the board with `✎ User revision` badge
+- [x] Wave shows only the affected roles (not all 8)
 - [ ] After wave completes + Reviewer re-runs, project returns to `stage1_done`
 - [ ] PRD artifact now mentions coloured tags
 - [ ] Skip button works: send another message → suggestion appears → click Skip → CTA disappears without triggering a revision
@@ -96,12 +96,19 @@ _Start a fresh project (use the same idea or any short idea)._
 4. Let Stage 1 run to completion.
 
 ### Expected
-- [ ] Chat response uses Narrator persona ("noted, I'll pass that to the Reviewer" style), not Shaper or Refiner
-- [ ] A note chip appears in the **PendingNotes** strip below the chat
+- [x] Chat response uses Narrator persona ("noted, I'll pass that to the Reviewer" style), not Shaper or Refiner
+- [x] A note chip appears in the **PendingNotes** strip below the chat
 - [ ] The chip disappears automatically when the Reviewer runs (absorbed)
 - [ ] The final Reviewer verdict references the offline mode requirement (check `review_report.json` via the Timeline review section or the artifact viewer)
 - [ ] If the Reviewer flagged a gap, a rework wave appears on the board (labeled "Rework wave" with `↻ Fix pass` badge)
 - [ ] Drop test: add a second note while running, then click **×** on its chip before the Reviewer runs — chip disappears and is NOT passed to the Reviewer
+
+---
+
+## Known bugs / deferred fixes
+
+- **[BUG]** `×` button on pending note chips does not work — clicking it has no effect; the chip stays. Needs investigation (likely a click handler or API call issue in `PendingNotes`).
+- **[UX]** Reviewer summary in chat is too verbose — full issue list with category, description, fix, and affected files makes the message very long. Fix: show a one-line summary (verdict + count) with a collapsible "Show details" section, so it doesn't hammer the chat view.
 
 ---
 

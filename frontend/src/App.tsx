@@ -40,14 +40,6 @@ export function App() {
     }
   }, [status]);
 
-  // When Stage 1 (or a revision) finishes, the wave engine posts a Lead
-  // message with the review summary. Pull it into the chat panel.
-  useEffect(() => {
-    if (status === "stage1_done") {
-      refreshChat();
-    }
-  }, [status, refreshChat]);
-
   // Merge DB-loaded event history with live SSE events. History gives us
   // events from before this browser session; sseEvents adds events that
   // fired after we connected. Deduplicate by timestamp+type in case the

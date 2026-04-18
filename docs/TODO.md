@@ -150,12 +150,19 @@ architectural details live in [plan.md](plan.md).
       under the board, keeping only the most recent 1-2 expanded. Each
       summarized to its instruction so users can find a specific past
       change quickly.
+- [ ] **Reviewer summary — find a better home.** The wave engine used to post a
+      full reviewer summary (verdict + all issues) as a Lead chat message. This
+      was reverted because it bloated the chat history and made subsequent Lead
+      CLI calls very slow (whole history re-sent each turn). The reviewer verdict
+      + issues need a dedicated surface instead. Combine with the modal below.
 - [ ] **Review report modal.** Currently the Reviewer's issues are expandable
       inline in the Timeline (click `▸` on the "Reviewer agent: approved — N issues" row).
       Replace or augment with a dedicated modal: larger reading surface,
       filterable by severity, each issue shows affected doc with a direct
       "Open artifact" link. Trigger: click the reviewer row in the Timeline
       OR a "View review" button in the board header when `stage1_done`.
+      The modal should also show a compact one-line summary (verdict + count)
+      in the board header so the user is aware without having to open it.
 - [ ] Demo recording
 - [ ] Blog post (ai-from-scratch chapter 19)
 - [ ] GitHub polish (description, topics, social preview image)
@@ -164,7 +171,14 @@ architectural details live in [plan.md](plan.md).
 
 ## Cross-cutting / whenever
 
-- [ ] Terminal chat wrapper (`python -m backend.chat <project-id>`) — same DB, power-user surface
+- [ ] **Terminal chat wrapper** (`python -m backend.chat <project-id>`) — hybrid power-user surface.
+      User chats with the Lead in the terminal (readline loop, markdown stripped to plain text);
+      the web dashboard stays open in a browser and shows live agent progress via SSE as normal.
+      Neither surface owns state — both read/write the same DB and the same wave engine fires.
+      Extra affordances the terminal gets over the browser: pipe in files, script multi-turn
+      sessions, tail uvicorn logs in a split pane while chatting, call `run_stage1` /
+      `run_revision` directly without going through the Lead.
+      Implementation: ~50-line wrapper around `LeadAgent.chat()` + a `readline` loop.
 - [ ] API-key-only fallback path (for users without a Claude subscription; pay-as-you-go)
 - [x] **Testing infrastructure** — pytest/pytest-asyncio/httpx backend, vitest/RTL/jsdom frontend, ruff + py_compile in pre-commit, GitHub Actions CI (backend + frontend + precommit hygiene). 66 tests passing (47 backend + 19 frontend).
 - [x] Wave engine coverage (partial) — `tests/backend/test_wave_engine.py` covers notes absorption across review/rework/revision paths, wave-flag persistence (is_rework / is_revision), the empty-notes baseline. 6 tests. **Still TODO:** semaphore concurrency limits, parallel/sequential ordering within a wave, failure-cascade path.
